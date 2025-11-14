@@ -1,0 +1,104 @@
+name: E2E Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  e2e-test:
+    name: E2E Tests on K3d
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install k3d
+        run: |
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.14.0'
+
+      - name: Setup test environment
+        run: |
+          chmod +x ./scripts/setup-test-env.sh
+          ./scripts/setup-test-env.sh
+
+      - name: Wait for services to be ready
+        run: |
+          export KUBECONFIG=$(pwd)/c4ang-infra/k8s-dev-k3d/kubeconfig/config
+          kubectl wait --for=condition=ready pod -l app=postgresql -n msa-quality --timeout=300s || true
+          kubectl wait --for=condition=ready pod -l app=redis-master -n msa-quality --timeout=300s || true
+          kubectl get pods -n msa-quality
+
+      - name: Run E2E tests
+        run: |
+          chmod +x ./scripts/run-tests.sh
+          ./scripts/run-tests.sh
+        env:
+          KARATE_ENV: local
+          K8S_NAMESPACE: msa-quality
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            build/karate-reports/
+            build/test-results/
+            build/reports/
+
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            build/test-results/**/*.xml
+
+      - name: Cleanup test environment
+        if: always()
+        run: |
+          chmod +x ./scripts/teardown-test-env.sh
+          ./scripts/teardown-test-env.sh --delete
+
+      - name: Print logs on failure
+        if: failure()
+        run: |
+          export KUBECONFIG=$(pwd)/c4ang-infra/k8s-dev-k3d/kubeconfig/config
+          echo "=== Pod Status ==="
+          kubectl get pods -n msa-quality
+          echo "=== Pod Logs ==="
+          for pod in $(kubectl get pods -n msa-quality -o name); do
+            echo "Logs for $pod:"
+            kubectl logs $pod -n msa-quality --tail=100 || true
+          done

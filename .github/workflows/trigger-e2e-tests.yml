@@ -1,0 +1,198 @@
+name: Trigger E2E Tests (From External Repo)
+
+on:
+  # 외부 레포에서 repository_dispatch 이벤트로 트리거
+  repository_dispatch:
+    types: [trigger-e2e-test]
+
+  # 수동 실행 지원 (GitHub UI에서)
+  workflow_dispatch:
+    inputs:
+      service_name:
+        description: '테스트할 서비스 이름 (예: customer-service)'
+        required: true
+        default: 'customer-service'
+      image_tag:
+        description: '테스트할 이미지 태그 (예: v1.0.0, develop-abc123)'
+        required: true
+        default: 'latest'
+      test_suite:
+        description: '실행할 테스트 스위트 (all, CustomerServiceTest, E2EScenarioTest)'
+        required: false
+        default: 'all'
+      environment:
+        description: '테스트 환경 (local, dev, staging)'
+        required: false
+        default: 'local'
+
+jobs:
+  triggered-e2e-test:
+    name: E2E Tests (Triggered)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Parse dispatch payload
+        id: parse
+        run: |
+          # repository_dispatch로 받은 경우
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "service_name=${{ github.event.client_payload.service_name }}" >> $GITHUB_OUTPUT
+            echo "image_tag=${{ github.event.client_payload.image_tag }}" >> $GITHUB_OUTPUT
+            echo "test_suite=${{ github.event.client_payload.test_suite || 'all' }}" >> $GITHUB_OUTPUT
+            echo "environment=${{ github.event.client_payload.environment || 'local' }}" >> $GITHUB_OUTPUT
+          # workflow_dispatch로 받은 경우
+          else
+            echo "service_name=${{ github.event.inputs.service_name }}" >> $GITHUB_OUTPUT
+            echo "image_tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+            echo "test_suite=${{ github.event.inputs.test_suite }}" >> $GITHUB_OUTPUT
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Display test parameters
+        run: |
+          echo "=== E2E Test Parameters ==="
+          echo "Service: ${{ steps.parse.outputs.service_name }}"
+          echo "Image Tag: ${{ steps.parse.outputs.image_tag }}"
+          echo "Test Suite: ${{ steps.parse.outputs.test_suite }}"
+          echo "Environment: ${{ steps.parse.outputs.environment }}"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install k3d
+        run: |
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.14.0'
+
+      - name: Setup test environment with custom image tag
+        run: |
+          chmod +x ./scripts/setup-test-env.sh
+          # 환경변수로 이미지 태그 전달
+          export CUSTOMER_SERVICE_TAG="${{ steps.parse.outputs.image_tag }}"
+          ./scripts/setup-test-env.sh
+        env:
+          CUSTOMER_SERVICE_TAG: ${{ steps.parse.outputs.image_tag }}
+
+      - name: Wait for services to be ready
+        run: |
+          export KUBECONFIG=$(pwd)/c4ang-infra/k8s-dev-k3d/kubeconfig/config
+          kubectl wait --for=condition=ready pod -l app=postgresql -n msa-quality --timeout=300s || true
+          kubectl wait --for=condition=ready pod -l app=redis-master -n msa-quality --timeout=300s || true
+
+          # 배포된 서비스 이미지 확인
+          echo "=== Deployed Service Images ==="
+          kubectl get pods -n msa-quality -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].image}{"\n"}{end}'
+
+      - name: Run E2E tests
+        run: |
+          chmod +x ./scripts/run-tests.sh
+
+          # 테스트 스위트 선택
+          if [ "${{ steps.parse.outputs.test_suite }}" == "all" ]; then
+            ./scripts/run-tests.sh
+          else
+            ./scripts/run-tests.sh -t "${{ steps.parse.outputs.test_suite }}"
+          fi
+        env:
+          KARATE_ENV: ${{ steps.parse.outputs.environment }}
+          K8S_NAMESPACE: msa-quality
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ steps.parse.outputs.service_name }}-${{ steps.parse.outputs.image_tag }}
+          path: |
+            build/karate-reports/
+            build/test-results/
+            build/reports/
+
+      - name: Publish test results
+        if: always()
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: |
+            build/test-results/**/*.xml
+
+      - name: Comment PR with test results (if triggered from PR)
+        if: always() && github.event.client_payload.pr_number
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const prNumber = ${{ github.event.client_payload.pr_number }};
+            const serviceName = '${{ steps.parse.outputs.service_name }}';
+            const imageTag = '${{ steps.parse.outputs.image_tag }}';
+            const testResult = '${{ job.status }}';
+
+            const comment = `## E2E Test Results
+
+            - **Service**: ${serviceName}
+            - **Image Tag**: ${imageTag}
+            - **Test Suite**: ${{ steps.parse.outputs.test_suite }}
+            - **Result**: ${testResult === 'success' ? '✅ PASSED' : '❌ FAILED'}
+
+            [View detailed report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: '${{ github.event.client_payload.repo_name }}',
+              issue_number: prNumber,
+              body: comment
+            });
+
+      - name: Cleanup test environment
+        if: always()
+        run: |
+          chmod +x ./scripts/teardown-test-env.sh
+          ./scripts/teardown-test-env.sh --delete
+
+      - name: Print logs on failure
+        if: failure()
+        run: |
+          export KUBECONFIG=$(pwd)/c4ang-infra/k8s-dev-k3d/kubeconfig/config
+          echo "=== Pod Status ==="
+          kubectl get pods -n msa-quality
+          echo "=== Pod Logs ==="
+          for pod in $(kubectl get pods -n msa-quality -o name); do
+            echo "Logs for $pod:"
+            kubectl logs $pod -n msa-quality --tail=100 || true
+          done
+
+      - name: Notify external repo on completion
+        if: always() && github.event.client_payload.callback_url
+        run: |
+          curl -X POST "${{ github.event.client_payload.callback_url }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "status": "${{ job.status }}",
+              "service": "${{ steps.parse.outputs.service_name }}",
+              "image_tag": "${{ steps.parse.outputs.image_tag }}",
+              "run_id": "${{ github.run_id }}",
+              "run_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'

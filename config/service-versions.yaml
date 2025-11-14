@@ -1,0 +1,22 @@
+# 서비스별 이미지 태그 설정
+# 이 파일을 수정하여 테스트할 서비스 버전을 제어합니다.
+
+services:
+  customer-service:
+    image:
+      repository: c4ang/customer-service
+      tag: "latest"  # 또는 특정 버전: "v1.0.0", "develop-abc123"
+    enabled: true
+
+  # 다른 서비스들이 추가될 예정
+  # order-service:
+  #   image:
+  #     repository: c4ang/order-service
+  #     tag: "latest"
+  #   enabled: true
+
+  # payment-service:
+  #   image:
+  #     repository: c4ang/payment-service
+  #     tag: "v1.2.0"
+  #   enabled: false  # 테스트에서 제외

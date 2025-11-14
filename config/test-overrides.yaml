@@ -1,0 +1,40 @@
+# 테스트 환경용 Helm values override
+# 서브모듈의 기본 설정을 덮어씁니다.
+
+# Customer Service 설정
+customer-service:
+  replicaCount: 1  # 테스트 환경에서는 1개만
+
+  image:
+    repository: c4ang/customer-service
+    tag: latest  # 여기서 버전 제어
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      memory: 256Mi  # 테스트 환경용 리소스 최소화
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 250m
+
+  autoscaling:
+    enabled: false  # 테스트 환경에서는 HPA 비활성화
+
+  ingress:
+    enabled: false  # 테스트에서는 Port-forward 사용
+
+# 인프라 설정 (PostgreSQL)
+postgresql:
+  enabled: true
+  auth:
+    database: customer_db
+    username: testuser
+    password: testpass123
+
+# 인프라 설정 (Redis)
+redis:
+  enabled: true
+  master:
+    persistence:
+      enabled: false  # 테스트 환경에서는 영속성 비활성화
