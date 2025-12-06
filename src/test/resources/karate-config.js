@@ -1,5 +1,5 @@
 function fn() {
-  var env = karate.env; // get system property 'karate.env'
+  var env = karate.env;
   karate.log('karate.env system property was:', env);
 
   if (!env) {
@@ -9,28 +9,21 @@ function fn() {
   var config = {
     env: env,
     apiTimeout: 30000,
-    retryInterval: 2000,
-    maxRetries: 3
+    retryInterval: 1000,
+    maxRetries: 15
   };
 
   // Environment-specific configuration
   if (env === 'local') {
-    // K3d 로컬 환경 (NodePort 또는 Port-Forward)
     config.baseUrl = 'http://localhost:8080';
-    config.namespace = 'msa-quality';
+    config.namespace = 'ecommerce';
     config.clusterDomain = 'cluster.local';
   } else if (env === 'dev') {
-    // 개발 환경 (Ingress)
-    config.baseUrl = 'http://api.c4ang.com';
-    config.namespace = 'msa-quality';
-  } else if (env === 'staging') {
-    // 스테이징 환경
-    config.baseUrl = 'http://api-staging.c4ang.com';
-    config.namespace = 'msa-quality-staging';
+    config.baseUrl = 'http://api.c4ang.dev';
+    config.namespace = 'ecommerce';
   } else if (env === 'prod') {
-    // 프로덕션 환경
     config.baseUrl = 'https://api.c4ang.com';
-    config.namespace = 'msa-quality-prod';
+    config.namespace = 'ecommerce';
   }
 
   // Common headers
@@ -39,39 +32,60 @@ function fn() {
     'Accept': 'application/json'
   };
 
-  // JWT 토큰 획득 헬퍼 함수
-  config.getAuthToken = function(username, password) {
-    var loginUrl = config.baseUrl + '/api/v1/auth/login';
-    var response = karate.call('classpath:features/auth/login.feature', {
-      username: username,
-      password: password
-    });
-    return response.token;
-  };
-
-  // 기본 테스트 사용자 계정 (환경변수로 오버라이드 가능)
-  config.testUser = {
-    username: karate.properties['test.user.username'] || 'test@c4ang.com',
-    password: karate.properties['test.user.password'] || 'testPassword123!'
-  };
-
-  // 서비스별 엔드포인트 (동적 서비스 추가 지원)
+  // Service endpoints
   config.services = {
-    auth: config.baseUrl + '/api/v1/auth',
-    customer: config.baseUrl + '/api/v1/customers',
-    // 다른 서비스들이 추가될 예정
-    // order: config.baseUrl + '/api/v1/orders',
-    // payment: config.baseUrl + '/api/v1/payments',
+    // Auth endpoints (customer-service)
+    customerSignup: '/api/v1/auth/customers/signup',
+    customerLogin: '/api/v1/auth/customers/login',
+    customerLogout: '/api/v1/auth/customers/logout',
+    ownerSignup: '/api/v1/auth/owners/signup',
+    ownerLogin: '/api/v1/auth/owners/login',
+    ownerLogout: '/api/v1/auth/owners/logout',
+    tokenRefresh: '/api/v1/auth/refresh',
+
+    // Store endpoints (store-service)
+    stores: '/api/v1/stores',
+
+    // Product endpoints (product-service)
+    products: '/api/v1/products',
+
+    // Order endpoints (order-service)
+    orders: '/api/v1/orders',
+
+    // Payment endpoints (payment-service)
+    payments: '/api/v1/payments'
   };
 
-  // Kubernetes 서비스 내부 엔드포인트 (서비스 간 통신 테스트용)
-  config.internalServices = {
-    customer: 'http://customer-service.' + config.namespace + '.svc.' + config.clusterDomain + ':8080'
-  };
-
+  // Retry configuration for async operations
+  karate.configure('retry', { count: config.maxRetries, interval: config.retryInterval });
   karate.configure('connectTimeout', config.apiTimeout);
   karate.configure('readTimeout', config.apiTimeout);
-  karate.configure('retry', { count: config.maxRetries, interval: config.retryInterval });
+
+  // UUID generator helper
+  config.uuid = function() {
+    return java.util.UUID.randomUUID().toString();
+  };
+
+  // Timestamp helper
+  config.timestamp = function() {
+    return new Date().getTime();
+  };
+
+  // Test data generators
+  config.generateCustomerEmail = function() {
+    return 'customer-' + config.uuid().substring(0, 8) + '@test.c4ang.com';
+  };
+
+  config.generateOwnerEmail = function() {
+    return 'owner-' + config.uuid().substring(0, 8) + '@test.c4ang.com';
+  };
+
+  config.generateUsername = function() {
+    return 'user-' + config.uuid().substring(0, 8);
+  };
+
+  // Default test password
+  config.testPassword = 'Test1234!@#';
 
   return config;
 }
