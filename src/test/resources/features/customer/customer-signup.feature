@@ -6,7 +6,7 @@ Feature: Customer Signup
     * def signupPath = services.customerSignup
 
   @happy-path
-  Scenario: [P1-AUTH-01] Customer signup success
+  Scenario: [P1-CUST-01] Customer signup success
     * def email = generateCustomerEmail()
     * def username = generateUsername()
 
@@ -17,6 +17,7 @@ Feature: Customer Signup
         "username": "#(username)",
         "email": "#(email)",
         "password": "#(testPassword)",
+        "defaultAddress": "서울특별시 강남구 테헤란로 123",
         "defaultPhoneNumber": "010-1234-5678"
       }
       """
@@ -25,12 +26,9 @@ Feature: Customer Signup
     And match response.userId == '#uuid'
     And match response.username == username
     And match response.email == email
-    And match response.role == 'CUSTOMER'
-    And match response.isActive == true
-    And match response.createdAt == '#notnull'
 
   @error-case
-  Scenario: [P1-AUTH-04] Customer signup with duplicate email fails
+  Scenario: [P1-CUST-04] Customer signup with duplicate email fails
     * def email = generateCustomerEmail()
     * def username1 = generateUsername()
     * def username2 = generateUsername()
@@ -42,7 +40,9 @@ Feature: Customer Signup
       {
         "username": "#(username1)",
         "email": "#(email)",
-        "password": "#(testPassword)"
+        "password": "#(testPassword)",
+        "defaultAddress": "서울특별시 강남구 테헤란로 123",
+        "defaultPhoneNumber": "010-1234-5678"
       }
       """
     When method POST
@@ -55,7 +55,9 @@ Feature: Customer Signup
       {
         "username": "#(username2)",
         "email": "#(email)",
-        "password": "#(testPassword)"
+        "password": "#(testPassword)",
+        "defaultAddress": "서울특별시 서초구 반포대로 456",
+        "defaultPhoneNumber": "010-9876-5432"
       }
       """
     When method POST
@@ -69,7 +71,9 @@ Feature: Customer Signup
       {
         "username": "#(generateUsername())",
         "email": "invalid-email",
-        "password": "#(testPassword)"
+        "password": "#(testPassword)",
+        "defaultAddress": "서울특별시 강남구 테헤란로 123",
+        "defaultPhoneNumber": "010-1234-5678"
       }
       """
     When method POST

@@ -15,7 +15,13 @@ function fn() {
 
   // Environment-specific configuration
   if (env === 'local') {
-    config.baseUrl = 'http://localhost:8080';
+    // 로컬 개발 환경 - 각 서비스가 개별 포트에서 실행
+    config.baseUrl = 'http://localhost:8082';  // customer-service
+    config.customerServiceUrl = 'http://localhost:8082';
+    config.storeServiceUrl = 'http://localhost:8083';
+    config.productServiceUrl = 'http://localhost:8084';
+    config.orderServiceUrl = 'http://localhost:8085';
+    config.paymentServiceUrl = 'http://localhost:8086';
     config.namespace = 'ecommerce';
     config.clusterDomain = 'cluster.local';
   } else if (env === 'dev') {
@@ -81,11 +87,11 @@ function fn() {
   };
 
   config.generateUsername = function() {
-    return 'user-' + config.uuid().substring(0, 8);
+    return 'u' + config.uuid().substring(0, 8);
   };
 
   // Default test password
-  config.testPassword = 'Test1234!@#';
+  config.testPassword = 'Test1234';
 
   return config;
 }

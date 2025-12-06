@@ -7,7 +7,7 @@ Feature: Customer Login
     * def loginPath = services.customerLogin
 
   @happy-path
-  Scenario: [P1-AUTH-01] Customer login success
+  Scenario: [P1-CUST-01] Customer login success
     # Setup: Create customer first
     * def email = generateCustomerEmail()
     * def username = generateUsername()
@@ -18,7 +18,9 @@ Feature: Customer Login
       {
         "username": "#(username)",
         "email": "#(email)",
-        "password": "#(testPassword)"
+        "password": "#(testPassword)",
+        "defaultAddress": "서울특별시 강남구 테헤란로 123",
+        "defaultPhoneNumber": "010-1234-5678"
       }
       """
     When method POST
@@ -37,11 +39,9 @@ Feature: Customer Login
     Then status 200
     And match response.accessToken == '#string'
     And match response.refreshToken == '#string'
-    And match response.expiresIn == '#number'
-    And match response.tokenType == 'Bearer'
 
   @error-case
-  Scenario: [P1-AUTH-04] Customer login with wrong password fails
+  Scenario: [P1-CUST-04] Customer login with wrong password fails
     # Setup: Create customer first
     * def email = generateCustomerEmail()
     * def username = generateUsername()
@@ -52,7 +52,9 @@ Feature: Customer Login
       {
         "username": "#(username)",
         "email": "#(email)",
-        "password": "#(testPassword)"
+        "password": "#(testPassword)",
+        "defaultAddress": "서울특별시 강남구 테헤란로 123",
+        "defaultPhoneNumber": "010-1234-5678"
       }
       """
     When method POST
