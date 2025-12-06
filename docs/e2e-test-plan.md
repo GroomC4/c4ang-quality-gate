@@ -81,13 +81,13 @@ dependencies {
 
 ### 4.1 Phase 1: Happy Path + Major Error Cases
 
-#### 4.1.1 Authentication Flow
+#### 4.1.1 Customer Flow (인증/회원관리)
 ```
-[P1-AUTH-01] Customer 회원가입 → 로그인 → 토큰 발급
-[P1-AUTH-02] Owner 회원가입 → 로그인 → 토큰 발급
-[P1-AUTH-03] 토큰 갱신 (refresh token)
-[P1-AUTH-04] 잘못된 비밀번호 → 401 에러
-[P1-AUTH-05] 만료된 토큰 → 401 에러
+[P1-CUST-01] Customer 회원가입 → 로그인 → 토큰 발급
+[P1-CUST-02] Owner 회원가입 → 로그인 → 토큰 발급
+[P1-CUST-03] 토큰 갱신 (refresh token)
+[P1-CUST-04] 잘못된 비밀번호 → 401 에러
+[P1-CUST-05] 만료된 토큰 → 401 에러
 ```
 
 #### 4.1.2 Store Flow
@@ -149,7 +149,7 @@ src/test/
 │   ├── config/
 │   │   └── TestConfig.kt           # K8s 연동, 환경설정
 │   ├── runners/
-│   │   ├── AuthServiceTest.kt      # 인증 테스트 러너
+│   │   ├── CustomerServiceTest.kt  # 고객 서비스 테스트 러너
 │   │   ├── StoreServiceTest.kt     # 스토어 테스트 러너
 │   │   ├── ProductServiceTest.kt   # 상품 테스트 러너
 │   │   ├── OrderServiceTest.kt     # 주문 테스트 러너
@@ -163,10 +163,11 @@ src/test/
 └── resources/
     ├── karate-config.js            # 환경별 설정
     └── features/
-        ├── auth/
+        ├── customer/
         │   ├── customer-signup.feature
+        │   ├── customer-login.feature
         │   ├── owner-signup.feature
-        │   ├── login.feature
+        │   ├── owner-login.feature
         │   └── token-refresh.feature
         ├── store/
         │   ├── create-store.feature
@@ -199,8 +200,8 @@ Feature: 주문 생성 - SAGA 플로우
 
   Background:
     * url baseUrl
-    * def auth = call read('classpath:features/auth/login.feature@owner')
-    * header Authorization = 'Bearer ' + auth.token
+    * def auth = call read('classpath:helpers/create-owner-and-login.feature')
+    * header Authorization = 'Bearer ' + auth.accessToken
     * header X-Idempotency-Key = java.util.UUID.randomUUID()
 
   @happy-path
@@ -400,8 +401,8 @@ Feature: 주문-결제 SAGA 플로우
 
   Background:
     * url baseUrl
-    * def auth = call read('classpath:features/auth/login.feature@customer')
-    * header Authorization = 'Bearer ' + auth.token
+    * def auth = call read('classpath:helpers/create-customer-and-login.feature')
+    * header Authorization = 'Bearer ' + auth.accessToken
     * configure retry = { count: 15, interval: 1000 }
 
   Scenario: [P1-E2E-01] 주문 → 재고예약 → 결제 → 완료
@@ -546,10 +547,11 @@ build/test-results/test/*.xml
 - [ ] setup-test-env.sh 스크립트 수정
 - [ ] karate-config.js 서비스 엔드포인트 업데이트
 
-#### Step 2: Auth 테스트 마이그레이션
+#### Step 2: Customer 테스트 마이그레이션
 - [ ] customer-signup.feature (Customer 회원가입)
+- [ ] customer-login.feature (Customer 로그인)
 - [ ] owner-signup.feature (Owner 회원가입)
-- [ ] login.feature 수정 (실제 API 스펙 반영)
+- [ ] owner-login.feature (Owner 로그인)
 - [ ] token-refresh.feature
 
 #### Step 3: Store 테스트 작성
