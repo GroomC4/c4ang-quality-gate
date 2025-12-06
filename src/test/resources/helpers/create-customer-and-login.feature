@@ -14,7 +14,9 @@ Feature: Create Customer and Login Helper
       {
         "username": "#(username)",
         "email": "#(email)",
-        "password": "#(password)"
+        "password": "#(password)",
+        "defaultAddress": "서울특별시 강남구 테헤란로 123",
+        "defaultPhoneNumber": "010-1234-5678"
       }
       """
     When method POST

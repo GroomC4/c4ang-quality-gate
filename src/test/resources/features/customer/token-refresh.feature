@@ -19,7 +19,9 @@ Feature: Token Refresh
       {
         "username": "#(username)",
         "email": "#(email)",
-        "password": "#(testPassword)"
+        "password": "#(testPassword)",
+        "defaultAddress": "서울특별시 강남구 테헤란로 123",
+        "defaultPhoneNumber": "010-1234-5678"
       }
       """
     When method POST
