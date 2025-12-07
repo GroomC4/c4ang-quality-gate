@@ -37,7 +37,7 @@ env:
 
 jobs:
   e2e-test:
-    name: E2E Tests (${{ inputs.environment || 'k3d' }})
+    name: "E2E Tests (${{ inputs.environment || 'k3d' }})"
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -198,7 +198,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports-${{ inputs.environment || 'k3d' }}
+          name: "test-reports-${{ inputs.environment || 'k3d' }}"
           path: |
             build/karate-reports/
             build/test-results/
@@ -211,7 +211,7 @@ jobs:
         with:
           files: |
             build/test-results/**/*.xml
-          check_name: 'E2E Test Results (${{ inputs.environment || 'k3d' }})'
+          check_name: "E2E Test Results (${{ inputs.environment || 'k3d' }})"
 
       - name: Cleanup K3d environment
         if: always() && (inputs.environment == 'k3d' || inputs.environment == '')
