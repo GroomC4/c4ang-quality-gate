@@ -250,6 +250,72 @@ install_istio() {
 }
 
 # =============================================================================
+# Phase 4-2: Istio Configuration 배포 (Gateway, HTTPRoute)
+# =============================================================================
+
+deploy_istio_config() {
+    if [ "$SKIP_ISTIO" == "true" ]; then
+        log_info "Istio Configuration 배포 스킵됨"
+        return 0
+    fi
+
+    log_step "Phase 4-2: Istio Configuration 배포 (Gateway, HTTPRoute)"
+
+    export KUBECONFIG="${KUBECONFIG_FILE}"
+
+    local istio_chart="${INFRA_REPO_PATH}/charts/istio"
+    local istio_values="${INFRA_REPO_PATH}/config/dev/istio.yaml"
+
+    if [ ! -d "${istio_chart}" ]; then
+        log_warn "Istio 차트를 찾을 수 없음: ${istio_chart}"
+        return 0
+    fi
+
+    log_info "Istio Configuration Helm 차트 배포 중..."
+
+    # Helm dependency build (있을 경우)
+    helm dependency build "${istio_chart}" 2>/dev/null || true
+
+    # Helm 설치/업그레이드
+    local helm_args=(
+        "upgrade" "--install" "istio-config" "${istio_chart}"
+        "--namespace" "${NAMESPACE}"
+        "--wait"
+        "--timeout" "3m"
+    )
+
+    # 환경별 values 파일 적용
+    if [ -f "${istio_values}" ]; then
+        helm_args+=("-f" "${istio_values}")
+    fi
+
+    # CI 환경 특화 설정
+    # - namespace.create=false (이미 생성됨)
+    # - JWT 인증 비활성화 (테스트 환경)
+    helm_args+=(
+        "--set" "namespace.create=false"
+        "--set" "security.jwt.enabled=false"
+        "--set" "crds.gatewayAPI.install=true"
+    )
+
+    helm "${helm_args[@]}" || {
+        log_warn "Istio Configuration 배포 실패, 계속 진행..."
+        # 디버그 정보 출력
+        kubectl get gateway -n "${NAMESPACE}" 2>/dev/null || true
+        kubectl get httproute -n "${NAMESPACE}" 2>/dev/null || true
+    }
+
+    # Gateway 리소스 확인
+    log_info "Gateway 리소스 확인:"
+    kubectl get gateway -n "${NAMESPACE}" 2>/dev/null || true
+
+    log_info "HTTPRoute 리소스 확인:"
+    kubectl get httproute -n "${NAMESPACE}" 2>/dev/null || true
+
+    log_success "Istio Configuration 배포 완료"
+}
+
+# =============================================================================
 # Phase 5: ExternalName 서비스 생성 (Docker → K8s 연결)
 # =============================================================================
 
@@ -578,6 +644,7 @@ main() {
     create_cluster
     install_argo_rollouts
     install_istio
+    deploy_istio_config      # Istio Gateway, HTTPRoute 배포
     create_external_services
     create_ecr_secret        # ECR secret을 Helm 배포 전에 생성
     deploy_services
