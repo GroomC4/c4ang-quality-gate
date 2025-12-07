@@ -3,66 +3,31 @@ function fn() {
   karate.log('karate.env system property was:', env);
 
   if (!env) {
-    env = 'local';
+    env = 'dev';
   }
 
   var config = {
     env: env,
     apiTimeout: 30000,
     retryInterval: 1000,
-    maxRetries: 15
+    maxRetries: 15,
+    namespace: 'ecommerce'
   };
 
   // Environment-specific configuration
-  if (env === 'local') {
-    // 로컬 개발 환경 - 각 서비스가 개별 포트에서 실행
-    config.baseUrl = 'http://localhost:8082';  // customer-service
-    config.customerServiceUrl = 'http://localhost:8082';
-    config.storeServiceUrl = 'http://localhost:8083';
-    config.productServiceUrl = 'http://localhost:8084';
-    config.orderServiceUrl = 'http://localhost:8085';
-    config.paymentServiceUrl = 'http://localhost:8086';
-    config.namespace = 'ecommerce';
-    config.clusterDomain = 'cluster.local';
-  } else if (env === 'k3d') {
-    // GitHub Actions K3d 환경 - port-forward로 접근
-    config.baseUrl = 'http://localhost:8081';  // customer-service
-    config.customerServiceUrl = 'http://localhost:8081';
-    config.storeServiceUrl = 'http://localhost:8084';
-    config.productServiceUrl = 'http://localhost:8083';
-    config.orderServiceUrl = 'http://localhost:8082';
-    config.paymentServiceUrl = 'http://localhost:8085';
-    config.namespace = 'ecommerce';
-    config.clusterDomain = 'cluster.local';
+  // 모든 환경에서 Istio Gateway (ecommerce-gateway)를 통해 API 요청
+  if (env === 'dev') {
+    // 개발 환경 (k3d) - Istio Gateway를 통해 접근
+    // port-forward로 istio-ingressgateway에 연결 (localhost:8080 -> istio-ingressgateway:80)
+    config.baseUrl = 'http://localhost:8080';
+    // Istio Gateway 라우팅을 위한 Host 헤더 (Gateway hostname과 일치해야 함)
+    config.gatewayHost = 'api.ecommerce.com';
     // K3d 환경에서는 시작이 느릴 수 있으므로 재시도 횟수 증가
     config.maxRetries = 20;
     config.retryInterval = 2000;
-  } else if (env === 'eks-staging') {
-    // EKS 스테이징 환경 - API Gateway 통해 접근
-    var eksBaseUrl = karate.properties['eks.base.url'] || 'https://api-staging.ecommerce.com';
-    config.baseUrl = eksBaseUrl;
-    config.customerServiceUrl = eksBaseUrl;
-    config.storeServiceUrl = eksBaseUrl;
-    config.productServiceUrl = eksBaseUrl;
-    config.orderServiceUrl = eksBaseUrl;
-    config.paymentServiceUrl = eksBaseUrl;
-    config.namespace = 'ecommerce';
-  } else if (env === 'eks-production') {
-    // EKS 프로덕션 환경
-    var eksProdUrl = karate.properties['eks.base.url'] || 'https://api.ecommerce.com';
-    config.baseUrl = eksProdUrl;
-    config.customerServiceUrl = eksProdUrl;
-    config.storeServiceUrl = eksProdUrl;
-    config.productServiceUrl = eksProdUrl;
-    config.orderServiceUrl = eksProdUrl;
-    config.paymentServiceUrl = eksProdUrl;
-    config.namespace = 'ecommerce';
-  } else if (env === 'dev') {
-    config.baseUrl = 'http://api.c4ang.dev';
-    config.namespace = 'ecommerce';
   } else if (env === 'prod') {
-    config.baseUrl = 'https://api.c4ang.com';
-    config.namespace = 'ecommerce';
+    // 프로덕션 환경 (EKS) - Istio Gateway (ALB/NLB)를 통해 접근
+    config.baseUrl = karate.properties['base.url'] || 'https://api.ecommerce.com';
   }
 
   // Common headers
@@ -71,9 +36,15 @@ function fn() {
     'Accept': 'application/json'
   };
 
-  // Service endpoints
+  // dev 환경에서는 Istio Gateway 라우팅을 위해 Host 헤더 추가
+  // (prod 환경에서는 DNS가 올바르게 설정되어 있으므로 Host 헤더 불필요)
+  if (config.gatewayHost) {
+    config.headers['Host'] = config.gatewayHost;
+  }
+
+  // Service endpoints (모든 환경에서 동일한 경로 사용 - Gateway가 라우팅)
   config.services = {
-    // Auth endpoints (customer-service)
+    // Auth endpoints (customer-api로 라우팅)
     customerSignup: '/api/v1/auth/customers/signup',
     customerLogin: '/api/v1/auth/customers/login',
     customerLogout: '/api/v1/auth/customers/logout',
@@ -82,16 +53,16 @@ function fn() {
     ownerLogout: '/api/v1/auth/owners/logout',
     tokenRefresh: '/api/v1/auth/refresh',
 
-    // Store endpoints (store-service)
+    // Store endpoints (store-api로 라우팅)
     stores: '/api/v1/stores',
 
-    // Product endpoints (product-service)
+    // Product endpoints (product-api로 라우팅)
     products: '/api/v1/products',
 
-    // Order endpoints (order-service)
+    // Order endpoints (order-api로 라우팅)
     orders: '/api/v1/orders',
 
-    // Payment endpoints (payment-service)
+    // Payment endpoints (payment-api로 라우팅)
     payments: '/api/v1/payments'
   };
 

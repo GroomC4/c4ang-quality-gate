@@ -15,11 +15,11 @@ on:
       environment:
         description: 'Test environment'
         required: true
-        default: 'k3d'
+        default: 'dev'
         type: choice
         options:
-          - k3d
-          - eks-staging
+          - dev   # k3d 로컬 클러스터
+          - prod  # EKS 프로덕션
       test_filter:
         description: 'Test filter (e.g., CustomerServiceTest, @happy-path)'
         required: false
@@ -38,7 +38,7 @@ env:
 
 jobs:
   e2e-test:
-    name: "E2E Tests (${{ inputs.environment || 'k3d' }})"
+    name: "E2E Tests (${{ inputs.environment || 'dev' }})"
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -69,7 +69,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Install k3d
-        if: inputs.environment == 'k3d' || inputs.environment == ''
+        if: inputs.environment == 'dev' || inputs.environment == ''
         run: |
           curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${{ env.K3D_VERSION }} bash
 
@@ -84,10 +84,10 @@ jobs:
           version: ${{ env.HELM_VERSION }}
 
       # ===========================================
-      # K3d Environment Setup
+      # dev Environment Setup (k3d)
       # ===========================================
       - name: Configure AWS credentials for ECR
-        if: inputs.environment == 'k3d' || inputs.environment == ''
+        if: inputs.environment == 'dev' || inputs.environment == ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -96,12 +96,11 @@ jobs:
 
       - name: Setup K3d environment
         id: k3d-setup
-        if: inputs.environment == 'k3d' || inputs.environment == ''
+        if: inputs.environment == 'dev' || inputs.environment == ''
         env:
           INFRA_REPO_PATH: ${{ github.workspace }}/c4ang-infra
           CLUSTER_NAME: e2e-test-cluster
           NAMESPACE: ecommerce
-          SKIP_ISTIO: 'true'  # CI에서는 Istio 스킵 (리소스 절약)
           # AWS 자격증명 전달 (ECR secret 생성에 필요)
           AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
@@ -109,13 +108,13 @@ jobs:
           AWS_DEFAULT_REGION: ap-northeast-2
         run: |
           chmod +x ./scripts/ci/setup-k3d-env.sh
-          ./scripts/ci/setup-k3d-env.sh --skip-istio
+          ./scripts/ci/setup-k3d-env.sh
           echo "kubeconfig=${{ github.workspace }}/.kubeconfig" >> $GITHUB_OUTPUT
 
       # ECR secret은 setup-k3d-env.sh 내부에서 생성됨 (Phase 5-1)
 
       - name: Wait for K3d services
-        if: inputs.environment == 'k3d' || inputs.environment == ''
+        if: inputs.environment == 'dev' || inputs.environment == ''
         env:
           KUBECONFIG: ${{ steps.k3d-setup.outputs.kubeconfig }}
           NAMESPACE: ecommerce
@@ -124,10 +123,10 @@ jobs:
           ./scripts/ci/wait-for-services.sh --timeout 300
 
       # ===========================================
-      # EKS Environment Setup
+      # prod Environment Setup (EKS)
       # ===========================================
-      - name: Configure AWS credentials
-        if: inputs.environment == 'eks-staging'
+      - name: Configure AWS credentials for EKS
+        if: inputs.environment == 'prod'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -135,7 +134,7 @@ jobs:
 
       - name: Setup EKS environment
         id: eks-setup
-        if: inputs.environment == 'eks-staging'
+        if: inputs.environment == 'prod'
         run: |
           aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ap-northeast-2
           echo "kubeconfig=$HOME/.kube/config" >> $GITHUB_OUTPUT
@@ -147,31 +146,28 @@ jobs:
       - name: Set environment variables
         id: env-vars
         run: |
-          if [ "${{ inputs.environment }}" == "eks-staging" ]; then
-            echo "karate_env=eks-staging" >> $GITHUB_OUTPUT
-            echo "base_url=${{ secrets.EKS_STAGING_URL }}" >> $GITHUB_OUTPUT
+          if [ "${{ inputs.environment }}" == "prod" ]; then
+            echo "karate_env=prod" >> $GITHUB_OUTPUT
+            echo "base_url=${{ secrets.PROD_API_URL }}" >> $GITHUB_OUTPUT
           else
-            echo "karate_env=k3d" >> $GITHUB_OUTPUT
+            # dev 환경 (k3d)
+            echo "karate_env=dev" >> $GITHUB_OUTPUT
             echo "base_url=http://localhost:8080" >> $GITHUB_OUTPUT
           fi
 
-      - name: Setup port-forward (K3d only)
-        if: inputs.environment == 'k3d' || inputs.environment == ''
+      - name: Setup port-forward (dev only)
+        if: inputs.environment == 'dev' || inputs.environment == ''
         env:
           KUBECONFIG: ${{ steps.k3d-setup.outputs.kubeconfig }}
         run: |
-          # 서비스 포트 포워딩 (service port: 80 -> localhost)
-          kubectl port-forward svc/customer-service 8081:80 -n ecommerce &
-          kubectl port-forward svc/order-service 8082:80 -n ecommerce &
-          kubectl port-forward svc/product-service 8083:80 -n ecommerce &
-          kubectl port-forward svc/store-service 8084:80 -n ecommerce &
-          kubectl port-forward svc/payment-service 8085:80 -n ecommerce &
+          # Istio Ingress Gateway를 통해 포트 포워딩 (모든 API 요청은 Gateway를 통해 라우팅)
+          kubectl port-forward svc/istio-ingressgateway 8080:80 -n istio-system &
           # 포트 준비 대기
           sleep 15
           # 포트 포워딩 확인
-          for port in 8081 8082 8083 8084 8085; do
-            nc -z localhost $port && echo "Port $port is ready" || echo "Port $port is not ready"
-          done
+          nc -z localhost 8080 && echo "Port 8080 (Istio Gateway) is ready" || echo "Port 8080 is not ready"
+          # Gateway 상태 확인
+          kubectl get gateway -n ecommerce || true
 
       - name: Run E2E tests
         env:
@@ -192,7 +188,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: "test-reports-${{ inputs.environment || 'k3d' }}"
+          name: "test-reports-${{ inputs.environment || 'dev' }}"
           path: |
             build/karate-reports/
             build/test-results/
@@ -205,13 +201,13 @@ jobs:
         with:
           files: |
             build/test-results/**/*.xml
-          check_name: "E2E Test Results (${{ inputs.environment || 'k3d' }})"
+          check_name: "E2E Test Results (${{ inputs.environment || 'dev' }})"
 
       # ===========================================
       # Debug on Failure (클러스터 삭제 전에 실행)
       # ===========================================
       - name: Debug - Show pod status
-        if: failure() && (inputs.environment == 'k3d' || inputs.environment == '')
+        if: failure() && (inputs.environment == 'dev' || inputs.environment == '')
         env:
           KUBECONFIG: ${{ github.workspace }}/.kubeconfig
         run: |
@@ -221,14 +217,23 @@ jobs:
           echo "=== Pod Status ==="
           kubectl get pods -n ecommerce -o wide || true
           echo ""
+          echo "=== Istio Pods ==="
+          kubectl get pods -n istio-system -o wide || true
+          echo ""
           echo "=== Services ==="
           kubectl get svc -n ecommerce || true
+          echo ""
+          echo "=== Gateway ==="
+          kubectl get gateway -n ecommerce || true
+          echo ""
+          echo "=== HTTPRoute ==="
+          kubectl get httproute -n ecommerce || true
           echo ""
           echo "=== Events (최근 오류) ==="
           kubectl get events -n ecommerce --sort-by='.lastTimestamp' | tail -30 || true
 
       - name: Debug - Show pod descriptions
-        if: failure() && (inputs.environment == 'k3d' || inputs.environment == '')
+        if: failure() && (inputs.environment == 'dev' || inputs.environment == '')
         env:
           KUBECONFIG: ${{ github.workspace }}/.kubeconfig
         run: |
@@ -236,7 +241,7 @@ jobs:
           kubectl describe pods -n ecommerce || true
 
       - name: Debug - Show pod logs
-        if: failure() && (inputs.environment == 'k3d' || inputs.environment == '')
+        if: failure() && (inputs.environment == 'dev' || inputs.environment == '')
         env:
           KUBECONFIG: ${{ github.workspace }}/.kubeconfig
         run: |
@@ -251,7 +256,7 @@ jobs:
           done
 
       - name: Debug - Show Docker Compose logs
-        if: failure() && (inputs.environment == 'k3d' || inputs.environment == '')
+        if: failure() && (inputs.environment == 'dev' || inputs.environment == '')
         run: |
           echo "=== Docker Compose Logs ==="
           cd c4ang-infra/external-services/docker
@@ -261,7 +266,7 @@ jobs:
       # Cleanup (디버그 후 마지막에 실행)
       # ===========================================
       - name: Cleanup K3d environment
-        if: always() && (inputs.environment == 'k3d' || inputs.environment == '')
+        if: always() && (inputs.environment == 'dev' || inputs.environment == '')
         env:
           INFRA_REPO_PATH: ${{ github.workspace }}/c4ang-infra
           CLUSTER_NAME: e2e-test-cluster

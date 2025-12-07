@@ -75,6 +75,7 @@ check_service_health() {
 
     export KUBECONFIG="${KUBECONFIG_FILE}"
 
+    # 애플리케이션 서비스 확인
     local services=("customer-api" "order-api" "product-api" "store-api" "payment-api" "saga-tracker-api")
     local failed=0
 
@@ -87,6 +88,23 @@ check_service_health() {
             failed=$((failed + 1))
         fi
     done
+
+    # Istio Ingress Gateway 확인
+    log_info "Istio Ingress Gateway 확인 중..."
+    if kubectl get svc istio-ingressgateway -n istio-system &>/dev/null; then
+        log_success "istio-ingressgateway 서비스 존재"
+    else
+        log_warn "istio-ingressgateway 서비스 없음"
+        failed=$((failed + 1))
+    fi
+
+    # Gateway 리소스 확인
+    if kubectl get gateway -n "${NAMESPACE}" &>/dev/null; then
+        log_success "Gateway 리소스 존재"
+        kubectl get gateway -n "${NAMESPACE}" 2>/dev/null || true
+    else
+        log_warn "Gateway 리소스 없음"
+    fi
 
     if [ $failed -gt 0 ]; then
         log_warn "${failed}개 서비스 누락"
