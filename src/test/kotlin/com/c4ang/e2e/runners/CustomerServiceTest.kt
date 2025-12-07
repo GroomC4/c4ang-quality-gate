@@ -4,37 +4,40 @@ import com.c4ang.e2e.TestLifecycleHooks
 import com.intuit.karate.junit5.Karate
 
 /**
- * Customer Service E2E 테스트 러너
+ * Customer Service E2E Tests
+ * - Customer signup/login
+ * - Owner signup/login
+ * - Token refresh
  */
 class CustomerServiceTest : TestLifecycleHooks() {
 
     @Karate.Test
-    fun testAuth(): Karate {
-        return Karate.run("classpath:features/auth/login.feature")
+    fun testCustomerSignup(): Karate {
+        return Karate.run("classpath:features/customer/customer-signup.feature")
             .relativeTo(javaClass)
     }
 
     @Karate.Test
-    fun testCreateCustomer(): Karate {
-        return Karate.run("classpath:features/customer/create-customer.feature")
+    fun testCustomerLogin(): Karate {
+        return Karate.run("classpath:features/customer/customer-login.feature")
             .relativeTo(javaClass)
     }
 
     @Karate.Test
-    fun testGetCustomer(): Karate {
-        return Karate.run("classpath:features/customer/get-customer.feature")
+    fun testOwnerSignup(): Karate {
+        return Karate.run("classpath:features/customer/owner-signup.feature")
             .relativeTo(javaClass)
     }
 
     @Karate.Test
-    fun testUpdateCustomer(): Karate {
-        return Karate.run("classpath:features/customer/update-customer.feature")
+    fun testOwnerLogin(): Karate {
+        return Karate.run("classpath:features/customer/owner-login.feature")
             .relativeTo(javaClass)
     }
 
     @Karate.Test
-    fun testDeleteCustomer(): Karate {
-        return Karate.run("classpath:features/customer/delete-customer.feature")
+    fun testTokenRefresh(): Karate {
+        return Karate.run("classpath:features/customer/token-refresh.feature")
             .relativeTo(javaClass)
     }
 }

@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.9.22"
+    kotlin("jvm") version "2.0.21"
     id("java")
 }
 
@@ -15,15 +15,15 @@ dependencies {
     testImplementation("com.intuit.karate:karate-junit5:1.4.1")
 
     // JUnit 5
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     // Kubernetes Client (for port-forwarding and cluster interaction)
-    testImplementation("io.fabric8:kubernetes-client:6.9.2")
+    testImplementation("io.fabric8:kubernetes-client:6.13.1")
 
     // Logging
-    testImplementation("ch.qos.logback:logback-classic:1.4.14")
-    testImplementation("org.slf4j:slf4j-api:2.0.9")
+    testImplementation("ch.qos.logback:logback-classic:1.5.6")
+    testImplementation("org.slf4j:slf4j-api:2.0.13")
 
     // Kotlin Standard Library
     implementation(kotlin("stdlib"))
@@ -32,8 +32,8 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 
-    systemProperty("karate.options", System.getProperty("karate.options"))
-    systemProperty("karate.env", System.getProperty("karate.env", "local"))
+    systemProperty("karate.options", System.getProperty("karate.options") ?: "")
+    systemProperty("karate.env", System.getProperty("karate.env") ?: "local")
 
     outputs.upToDateWhen { false }
 
@@ -44,12 +44,12 @@ tasks.test {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 // Karate 리포트 생성
