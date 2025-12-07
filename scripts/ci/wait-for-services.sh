@@ -75,7 +75,7 @@ check_service_health() {
 
     export KUBECONFIG="${KUBECONFIG_FILE}"
 
-    local services=("customer-service" "order-service" "product-service" "store-service" "payment-service")
+    local services=("customer-api" "order-api" "product-api" "store-api" "payment-api" "saga-tracker-api")
     local failed=0
 
     for service in "${services[@]}"; do
