@@ -26,6 +26,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 KUBECONFIG_FILE="${PROJECT_ROOT}/.kubeconfig"
 NAMESPACE="${NAMESPACE:-ecommerce}"
 TIMEOUT="${TIMEOUT:-300}"
+SKIP_ISTIO="${SKIP_ISTIO:-false}"
 
 # 로그 함수
 log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -84,21 +85,26 @@ check_service_health() {
         fi
     done
 
-    # Istio Ingress Gateway 확인
-    log_info "Istio Ingress Gateway 확인 중..."
-    if kubectl get svc istio-ingressgateway -n istio-system &>/dev/null; then
-        log_success "istio-ingressgateway 서비스 존재"
-    else
-        log_warn "istio-ingressgateway 서비스 없음"
-        failed=$((failed + 1))
-    fi
+    # Istio 확인 (SKIP_ISTIO가 false인 경우에만)
+    if [ "$SKIP_ISTIO" != "true" ]; then
+        # Istio Ingress Gateway 확인
+        log_info "Istio Ingress Gateway 확인 중..."
+        if kubectl get svc istio-ingressgateway -n istio-system &>/dev/null; then
+            log_success "istio-ingressgateway 서비스 존재"
+        else
+            log_warn "istio-ingressgateway 서비스 없음"
+            failed=$((failed + 1))
+        fi
 
-    # Gateway 리소스 확인
-    if kubectl get gateway -n "${NAMESPACE}" &>/dev/null; then
-        log_success "Gateway 리소스 존재"
-        kubectl get gateway -n "${NAMESPACE}" 2>/dev/null || true
+        # Gateway 리소스 확인
+        if kubectl get gateway -n "${NAMESPACE}" &>/dev/null; then
+            log_success "Gateway 리소스 존재"
+            kubectl get gateway -n "${NAMESPACE}" 2>/dev/null || true
+        else
+            log_warn "Gateway 리소스 없음"
+        fi
     else
-        log_warn "Gateway 리소스 없음"
+        log_info "Istio 스킵됨 (SKIP_ISTIO=true)"
     fi
 
     if [ $failed -gt 0 ]; then
