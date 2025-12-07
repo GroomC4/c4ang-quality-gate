@@ -33,7 +33,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 # 설정
-INFRA_REPO_PATH="${INFRA_REPO_PATH:-${PROJECT_ROOT}/../c4ang-infra}"
+# 서브모듈로 포함된 c4ang-infra 사용 (기본값)
+INFRA_REPO_PATH="${INFRA_REPO_PATH:-${PROJECT_ROOT}/c4ang-infra}"
 CLUSTER_NAME="${CLUSTER_NAME:-e2e-test-cluster}"
 NAMESPACE="${NAMESPACE:-ecommerce}"
 KUBECONFIG_FILE="${PROJECT_ROOT}/.kubeconfig"

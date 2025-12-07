@@ -45,15 +45,11 @@ jobs:
       # ===========================================
       # Setup
       # ===========================================
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Checkout infrastructure repo
+      - name: Checkout code with submodules
         uses: actions/checkout@v4
         with:
-          repository: GroomC4/c4ang-infra
-          path: c4ang-infra
-          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive
+          fetch-depth: 0
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
