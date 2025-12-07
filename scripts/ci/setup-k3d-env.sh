@@ -192,20 +192,26 @@ create_cluster() {
 # Phase 4: Argo Rollouts CRD 설치 (Helm 차트 의존성)
 # =============================================================================
 
-install_argo_rollouts_crd() {
-    log_step "Phase 4: Argo Rollouts CRD 설치"
+install_argo_rollouts() {
+    log_step "Phase 4: Argo Rollouts 설치 (CRD + 컨트롤러)"
 
     export KUBECONFIG="${KUBECONFIG_FILE}"
 
-    # Argo Rollouts CRD 설치 (kustomize 사용 - 공식 권장 방법)
-    log_info "Argo Rollouts CRD 설치 중..."
-    kubectl apply -k https://github.com/argoproj/argo-rollouts/manifests/crds?ref=stable || {
-        log_warn "kustomize 방식 실패, 전체 설치 시도..."
-        kubectl create namespace argo-rollouts --dry-run=client -o yaml | kubectl apply -f -
-        kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml || true
+    # Argo Rollouts 전체 설치 (CRD + 컨트롤러)
+    # 컨트롤러가 없으면 Rollout 리소스가 Pod를 생성하지 않음
+    log_info "Argo Rollouts 네임스페이스 생성..."
+    kubectl create namespace argo-rollouts --dry-run=client -o yaml | kubectl apply -f -
+
+    log_info "Argo Rollouts 설치 중 (CRD + 컨트롤러)..."
+    kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+
+    # 컨트롤러가 준비될 때까지 대기
+    log_info "Argo Rollouts 컨트롤러 준비 대기 중..."
+    kubectl rollout status deployment/argo-rollouts -n argo-rollouts --timeout=120s || {
+        log_warn "Argo Rollouts 컨트롤러 준비 대기 타임아웃 (계속 진행)"
     }
 
-    log_success "Argo Rollouts CRD 설치 완료"
+    log_success "Argo Rollouts 설치 완료"
 }
 
 # =============================================================================
@@ -533,7 +539,7 @@ main() {
     check_prerequisites
     start_external_services
     create_cluster
-    install_argo_rollouts_crd
+    install_argo_rollouts
     install_istio
     create_external_services
     deploy_services
