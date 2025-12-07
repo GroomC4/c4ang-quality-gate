@@ -197,12 +197,13 @@ install_argo_rollouts_crd() {
 
     export KUBECONFIG="${KUBECONFIG_FILE}"
 
-    # Argo Rollouts CRD 설치 (컨트롤러 없이 CRD만)
+    # Argo Rollouts CRD 설치 (kustomize 사용 - 공식 권장 방법)
     log_info "Argo Rollouts CRD 설치 중..."
-    kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-rollouts/stable/manifests/crds/rollout-crd.yaml || true
-    kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-rollouts/stable/manifests/crds/analysis-template-crd.yaml || true
-    kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-rollouts/stable/manifests/crds/analysisrun-crd.yaml || true
-    kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-rollouts/stable/manifests/crds/experiment-crd.yaml || true
+    kubectl apply -k https://github.com/argoproj/argo-rollouts/manifests/crds?ref=stable || {
+        log_warn "kustomize 방식 실패, 전체 설치 시도..."
+        kubectl create namespace argo-rollouts --dry-run=client -o yaml | kubectl apply -f -
+        kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml || true
+    }
 
     log_success "Argo Rollouts CRD 설치 완료"
 }
@@ -379,6 +380,9 @@ deploy_services() {
     # 서비스 목록
     local services=("customer-service" "order-service" "product-service" "store-service" "payment-service" "saga-tracker")
 
+    # 공유 AnalysisTemplate이 이미 생성되었는지 확인하는 플래그
+    local analysis_template_created="false"
+
     for service in "${services[@]}"; do
         local chart_path="${charts_dir}/${service}"
         local values_path="${config_dir}/${service}.yaml"
@@ -390,12 +394,18 @@ deploy_services() {
 
         log_info "배포 중: ${service}"
 
+        # Helm dependency build (redis-base 등 로컬 dependency 해결)
+        log_info "Helm dependency build: ${service}"
+        helm dependency build "${chart_path}" 2>/dev/null || {
+            log_warn "Dependency build 실패 (무시): ${service}"
+        }
+
         # Helm 설치/업그레이드
         local helm_args=(
             "upgrade" "--install" "${service}" "${chart_path}"
             "--namespace" "${NAMESPACE}"
             "--wait"
-            "--timeout" "3m"
+            "--timeout" "5m"
         )
 
         # 환경별 values 파일 적용
@@ -408,9 +418,22 @@ deploy_services() {
             helm_args+=("-f" "${ci_values}")
         fi
 
+        # CI 환경에서는 Redis subchart 비활성화 (ExternalName 서비스 사용)
+        helm_args+=("--set" "redis.enabled=false")
+
+        # AnalysisTemplate 충돌 방지: 첫 번째 서비스만 생성
+        if [ "$analysis_template_created" == "true" ]; then
+            helm_args+=("--set" "analysisTemplate.enabled=false")
+        fi
+
         helm "${helm_args[@]}" || {
             log_warn "${service} 배포 실패, 계속 진행..."
         }
+
+        # 첫 번째 성공적인 배포 후 플래그 설정
+        if [ "$analysis_template_created" == "false" ]; then
+            analysis_template_created="true"
+        fi
     done
 
     log_success "서비스 배포 완료"
