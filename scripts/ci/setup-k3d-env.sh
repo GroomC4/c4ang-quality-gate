@@ -232,8 +232,11 @@ install_istio() {
     log_info "Gateway API CRD 설치 중..."
     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
 
-    # CRD가 등록될 때까지 잠시 대기
-    sleep 3
+    # CRD가 등록 완료될 때까지 대기
+    log_info "Gateway API CRD 등록 대기 중..."
+    kubectl wait --for=condition=Established crd/gateways.gateway.networking.k8s.io --timeout=60s
+    kubectl wait --for=condition=Established crd/httproutes.gateway.networking.k8s.io --timeout=60s
+    kubectl wait --for=condition=Established crd/gatewayclasses.gateway.networking.k8s.io --timeout=60s
 
     # Istio 설치 확인
     if ! command -v istioctl &>/dev/null; then
