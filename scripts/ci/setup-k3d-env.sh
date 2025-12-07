@@ -155,10 +155,10 @@ create_cluster() {
 
     log_info "K3d 클러스터 생성 중: ${CLUSTER_NAME}"
 
+    # Istio Ingress Gateway를 사용하므로 K3d LoadBalancer 포트 매핑 제거
+    # kubectl port-forward로 istio-ingressgateway에 직접 연결
     k3d cluster create "${CLUSTER_NAME}" \
         --api-port 6443 \
-        --port "8080:80@loadbalancer" \
-        --port "8443:443@loadbalancer" \
         --k3s-arg "--disable=traefik@server:0" \
         --wait \
         --timeout 180s
