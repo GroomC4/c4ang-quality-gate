@@ -207,17 +207,8 @@ jobs:
             build/test-results/**/*.xml
           check_name: "E2E Test Results (${{ inputs.environment || 'k3d' }})"
 
-      - name: Cleanup K3d environment
-        if: always() && (inputs.environment == 'k3d' || inputs.environment == '')
-        env:
-          INFRA_REPO_PATH: ${{ github.workspace }}/c4ang-infra
-          CLUSTER_NAME: e2e-test-cluster
-        run: |
-          chmod +x ./scripts/ci/teardown-k3d-env.sh
-          ./scripts/ci/teardown-k3d-env.sh
-
       # ===========================================
-      # Debug on Failure
+      # Debug on Failure (클러스터 삭제 전에 실행)
       # ===========================================
       - name: Debug - Show pod status
         if: failure() && (inputs.environment == 'k3d' || inputs.environment == '')
@@ -228,8 +219,19 @@ jobs:
           k3d cluster list || true
           echo ""
           echo "=== Pod Status ==="
-          kubectl get pods -n ecommerce || true
+          kubectl get pods -n ecommerce -o wide || true
           echo ""
+          echo "=== Services ==="
+          kubectl get svc -n ecommerce || true
+          echo ""
+          echo "=== Events (최근 오류) ==="
+          kubectl get events -n ecommerce --sort-by='.lastTimestamp' | tail -30 || true
+
+      - name: Debug - Show pod descriptions
+        if: failure() && (inputs.environment == 'k3d' || inputs.environment == '')
+        env:
+          KUBECONFIG: ${{ github.workspace }}/.kubeconfig
+        run: |
           echo "=== Pod Descriptions ==="
           kubectl describe pods -n ecommerce || true
 
@@ -241,7 +243,11 @@ jobs:
           echo "=== Pod Logs ==="
           for pod in $(kubectl get pods -n ecommerce -o name 2>/dev/null); do
             echo "--- Logs for $pod ---"
-            kubectl logs $pod -n ecommerce --tail=50 || true
+            kubectl logs $pod -n ecommerce --tail=100 || true
+            echo ""
+            echo "--- Previous Logs for $pod (if crashed) ---"
+            kubectl logs $pod -n ecommerce --previous --tail=100 2>/dev/null || echo "No previous logs"
+            echo ""
           done
 
       - name: Debug - Show Docker Compose logs
@@ -249,4 +255,16 @@ jobs:
         run: |
           echo "=== Docker Compose Logs ==="
           cd c4ang-infra/external-services/docker
-          docker compose logs --tail=50 || docker-compose logs --tail=50 || true
+          docker compose logs --tail=100 || docker-compose logs --tail=100 || true
+
+      # ===========================================
+      # Cleanup (디버그 후 마지막에 실행)
+      # ===========================================
+      - name: Cleanup K3d environment
+        if: always() && (inputs.environment == 'k3d' || inputs.environment == '')
+        env:
+          INFRA_REPO_PATH: ${{ github.workspace }}/c4ang-infra
+          CLUSTER_NAME: e2e-test-cluster
+        run: |
+          chmod +x ./scripts/ci/teardown-k3d-env.sh
+          ./scripts/ci/teardown-k3d-env.sh
