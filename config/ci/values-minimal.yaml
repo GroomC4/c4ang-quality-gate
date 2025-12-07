@@ -18,25 +18,22 @@ replicaCount: 1
 autoscaling:
   enabled: false
 
-# Istio sidecar 리소스 제한
-podAnnotations:
-  sidecar.istio.io/proxyCPU: "50m"
-  sidecar.istio.io/proxyMemory: "64Mi"
-  sidecar.istio.io/proxyCPULimit: "100m"
-  sidecar.istio.io/proxyMemoryLimit: "128Mi"
+# Istio 비활성화 (CI 환경)
+istio:
+  enabled: false
 
 # Liveness/Readiness 프로브 완화 (CI 환경에서 느린 시작 허용)
 livenessProbe:
-  initialDelaySeconds: 60
+  initialDelaySeconds: 120
   periodSeconds: 30
   timeoutSeconds: 10
-  failureThreshold: 5
+  failureThreshold: 10
 
 readinessProbe:
-  initialDelaySeconds: 30
+  initialDelaySeconds: 60
   periodSeconds: 10
   timeoutSeconds: 5
-  failureThreshold: 3
+  failureThreshold: 10
 
 # 이미지 풀 정책 (캐시 활용)
 image:
@@ -44,9 +41,9 @@ image:
 
 # 환경변수 오버라이드 (CI용)
 config:
-  SPRING_PROFILES_ACTIVE: "ci"
+  SPRING_PROFILES_ACTIVE: "dev"
   # JVM 메모리 최적화
-  JAVA_OPTS: "-Xms128m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
+  JAVA_OPTS: "-Xms128m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100"
   # 로깅 레벨 (디버그 최소화)
   LOGGING_LEVEL_ROOT: "WARN"
   LOGGING_LEVEL_COM_C4ANG: "INFO"

@@ -189,7 +189,26 @@ create_cluster() {
 }
 
 # =============================================================================
-# Phase 4: Istio 설치 (선택적)
+# Phase 4: Argo Rollouts CRD 설치 (Helm 차트 의존성)
+# =============================================================================
+
+install_argo_rollouts_crd() {
+    log_step "Phase 4: Argo Rollouts CRD 설치"
+
+    export KUBECONFIG="${KUBECONFIG_FILE}"
+
+    # Argo Rollouts CRD 설치 (컨트롤러 없이 CRD만)
+    log_info "Argo Rollouts CRD 설치 중..."
+    kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-rollouts/stable/manifests/crds/rollout-crd.yaml || true
+    kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-rollouts/stable/manifests/crds/analysis-template-crd.yaml || true
+    kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-rollouts/stable/manifests/crds/analysisrun-crd.yaml || true
+    kubectl apply -f https://raw.githubusercontent.com/argoproj/argo-rollouts/stable/manifests/crds/experiment-crd.yaml || true
+
+    log_success "Argo Rollouts CRD 설치 완료"
+}
+
+# =============================================================================
+# Phase 4-1: Istio 설치 (선택적)
 # =============================================================================
 
 install_istio() {
@@ -198,7 +217,7 @@ install_istio() {
         return 0
     fi
 
-    log_step "Phase 4: Istio 설치"
+    log_step "Phase 4-1: Istio 설치"
 
     export KUBECONFIG="${KUBECONFIG_FILE}"
 
@@ -487,6 +506,7 @@ main() {
     check_prerequisites
     start_external_services
     create_cluster
+    install_argo_rollouts_crd
     install_istio
     create_external_services
     deploy_services
