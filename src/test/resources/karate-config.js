@@ -24,6 +24,39 @@ function fn() {
     config.paymentServiceUrl = 'http://localhost:8086';
     config.namespace = 'ecommerce';
     config.clusterDomain = 'cluster.local';
+  } else if (env === 'k3d') {
+    // GitHub Actions K3d 환경 - port-forward로 접근
+    config.baseUrl = 'http://localhost:8081';  // customer-service
+    config.customerServiceUrl = 'http://localhost:8081';
+    config.storeServiceUrl = 'http://localhost:8084';
+    config.productServiceUrl = 'http://localhost:8083';
+    config.orderServiceUrl = 'http://localhost:8082';
+    config.paymentServiceUrl = 'http://localhost:8085';
+    config.namespace = 'ecommerce';
+    config.clusterDomain = 'cluster.local';
+    // K3d 환경에서는 시작이 느릴 수 있으므로 재시도 횟수 증가
+    config.maxRetries = 20;
+    config.retryInterval = 2000;
+  } else if (env === 'eks-staging') {
+    // EKS 스테이징 환경 - API Gateway 통해 접근
+    var eksBaseUrl = karate.properties['eks.base.url'] || 'https://api-staging.ecommerce.com';
+    config.baseUrl = eksBaseUrl;
+    config.customerServiceUrl = eksBaseUrl;
+    config.storeServiceUrl = eksBaseUrl;
+    config.productServiceUrl = eksBaseUrl;
+    config.orderServiceUrl = eksBaseUrl;
+    config.paymentServiceUrl = eksBaseUrl;
+    config.namespace = 'ecommerce';
+  } else if (env === 'eks-production') {
+    // EKS 프로덕션 환경
+    var eksProdUrl = karate.properties['eks.base.url'] || 'https://api.ecommerce.com';
+    config.baseUrl = eksProdUrl;
+    config.customerServiceUrl = eksProdUrl;
+    config.storeServiceUrl = eksProdUrl;
+    config.productServiceUrl = eksProdUrl;
+    config.orderServiceUrl = eksProdUrl;
+    config.paymentServiceUrl = eksProdUrl;
+    config.namespace = 'ecommerce';
   } else if (env === 'dev') {
     config.baseUrl = 'http://api.c4ang.dev';
     config.namespace = 'ecommerce';

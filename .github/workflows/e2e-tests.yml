@@ -10,73 +10,172 @@ on:
       - main
       - develop
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Test environment'
+        required: true
+        default: 'k3d'
+        type: choice
+        options:
+          - k3d
+          - eks-staging
+      test_filter:
+        description: 'Test filter (e.g., CustomerServiceTest, @happy-path)'
+        required: false
+        type: string
+      service_versions:
+        description: 'Service versions override (JSON: {"customer-service": "v1.2.0"})'
+        required: false
+        type: string
+
+env:
+  JAVA_VERSION: '21'
+  GRADLE_VERSION: '8.5'
+  K3D_VERSION: 'v5.6.0'
+  KUBECTL_VERSION: 'v1.29.0'
+  HELM_VERSION: 'v3.14.0'
 
 jobs:
   e2e-test:
-    name: E2E Tests on K3d
+    name: E2E Tests (${{ inputs.environment || 'k3d' }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
+      # ===========================================
+      # Setup
+      # ===========================================
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
 
-      - name: Set up JDK 17
+      - name: Checkout infrastructure repo
+        uses: actions/checkout@v4
+        with:
+          repository: GroomC4/c4ang-infra
+          path: c4ang-infra
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: ${{ env.JAVA_VERSION }}
           cache: 'gradle'
 
       - name: Setup Docker
         uses: docker/setup-buildx-action@v3
 
       - name: Install k3d
+        if: inputs.environment == 'k3d' || inputs.environment == ''
         run: |
-          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${{ env.K3D_VERSION }} bash
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
         with:
-          version: 'v1.28.0'
+          version: ${{ env.KUBECTL_VERSION }}
 
       - name: Install Helm
         uses: azure/setup-helm@v3
         with:
-          version: 'v3.14.0'
+          version: ${{ env.HELM_VERSION }}
 
-      - name: Setup test environment
+      # ===========================================
+      # K3d Environment Setup
+      # ===========================================
+      - name: Setup K3d environment
+        id: k3d-setup
+        if: inputs.environment == 'k3d' || inputs.environment == ''
+        env:
+          INFRA_REPO_PATH: ${{ github.workspace }}/c4ang-infra
+          CLUSTER_NAME: e2e-test-cluster
+          NAMESPACE: ecommerce
+          SKIP_ISTIO: 'true'  # CI에서는 Istio 스킵 (리소스 절약)
         run: |
-          chmod +x ./scripts/setup-test-env.sh
-          ./scripts/setup-test-env.sh
+          chmod +x ./scripts/ci/setup-k3d-env.sh
+          ./scripts/ci/setup-k3d-env.sh --skip-istio
+          echo "kubeconfig=${{ github.workspace }}/.kubeconfig" >> $GITHUB_OUTPUT
 
-      - name: Wait for services to be ready
+      - name: Wait for K3d services
+        if: inputs.environment == 'k3d' || inputs.environment == ''
+        env:
+          KUBECONFIG: ${{ steps.k3d-setup.outputs.kubeconfig }}
+          NAMESPACE: ecommerce
         run: |
-          export KUBECONFIG=$(pwd)/c4ang-infra/k8s-dev-k3d/kubeconfig/config
-          kubectl wait --for=condition=ready pod -l app=postgresql -n msa-quality --timeout=300s || true
-          kubectl wait --for=condition=ready pod -l app=redis-master -n msa-quality --timeout=300s || true
-          kubectl get pods -n msa-quality
+          chmod +x ./scripts/ci/wait-for-services.sh
+          ./scripts/ci/wait-for-services.sh --timeout 300
+
+      # ===========================================
+      # EKS Environment Setup
+      # ===========================================
+      - name: Configure AWS credentials
+        if: inputs.environment == 'eks-staging'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: Setup EKS environment
+        id: eks-setup
+        if: inputs.environment == 'eks-staging'
+        run: |
+          aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }} --region ap-northeast-2
+          echo "kubeconfig=$HOME/.kube/config" >> $GITHUB_OUTPUT
+          kubectl get nodes
+
+      # ===========================================
+      # Run Tests
+      # ===========================================
+      - name: Set environment variables
+        id: env-vars
+        run: |
+          if [ "${{ inputs.environment }}" == "eks-staging" ]; then
+            echo "karate_env=eks-staging" >> $GITHUB_OUTPUT
+            echo "base_url=${{ secrets.EKS_STAGING_URL }}" >> $GITHUB_OUTPUT
+          else
+            echo "karate_env=k3d" >> $GITHUB_OUTPUT
+            echo "base_url=http://localhost:8080" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup port-forward (K3d only)
+        if: inputs.environment == 'k3d' || inputs.environment == ''
+        env:
+          KUBECONFIG: ${{ steps.k3d-setup.outputs.kubeconfig }}
+        run: |
+          # customer-service 포트 포워딩
+          kubectl port-forward svc/customer-service 8081:8081 -n ecommerce &
+          kubectl port-forward svc/order-service 8082:8081 -n ecommerce &
+          kubectl port-forward svc/product-service 8083:8081 -n ecommerce &
+          kubectl port-forward svc/store-service 8084:8081 -n ecommerce &
+          kubectl port-forward svc/payment-service 8085:8081 -n ecommerce &
+          # 포트 준비 대기
+          sleep 10
 
       - name: Run E2E tests
-        run: |
-          chmod +x ./scripts/run-tests.sh
-          ./scripts/run-tests.sh
         env:
-          KARATE_ENV: local
-          K8S_NAMESPACE: msa-quality
+          KARATE_ENV: ${{ steps.env-vars.outputs.karate_env }}
+          KUBECONFIG: ${{ steps.k3d-setup.outputs.kubeconfig || steps.eks-setup.outputs.kubeconfig }}
+        run: |
+          TEST_FILTER="${{ inputs.test_filter }}"
+          if [ -n "$TEST_FILTER" ]; then
+            ./gradlew test --tests "$TEST_FILTER" --info
+          else
+            ./gradlew test --info
+          fi
 
+      # ===========================================
+      # Results & Cleanup
+      # ===========================================
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports
+          name: test-reports-${{ inputs.environment || 'k3d' }}
           path: |
             build/karate-reports/
             build/test-results/
             build/reports/
+          retention-days: 14
 
       - name: Publish test results
         if: always()
@@ -84,21 +183,48 @@ jobs:
         with:
           files: |
             build/test-results/**/*.xml
+          check_name: 'E2E Test Results (${{ inputs.environment || 'k3d' }})'
 
-      - name: Cleanup test environment
-        if: always()
+      - name: Cleanup K3d environment
+        if: always() && (inputs.environment == 'k3d' || inputs.environment == '')
+        env:
+          INFRA_REPO_PATH: ${{ github.workspace }}/c4ang-infra
+          CLUSTER_NAME: e2e-test-cluster
         run: |
-          chmod +x ./scripts/teardown-test-env.sh
-          ./scripts/teardown-test-env.sh --delete
+          chmod +x ./scripts/ci/teardown-k3d-env.sh
+          ./scripts/ci/teardown-k3d-env.sh
 
-      - name: Print logs on failure
-        if: failure()
+      # ===========================================
+      # Debug on Failure
+      # ===========================================
+      - name: Debug - Show pod status
+        if: failure() && (inputs.environment == 'k3d' || inputs.environment == '')
+        env:
+          KUBECONFIG: ${{ github.workspace }}/.kubeconfig
         run: |
-          export KUBECONFIG=$(pwd)/c4ang-infra/k8s-dev-k3d/kubeconfig/config
+          echo "=== K3d Cluster Status ==="
+          k3d cluster list || true
+          echo ""
           echo "=== Pod Status ==="
-          kubectl get pods -n msa-quality
+          kubectl get pods -n ecommerce || true
+          echo ""
+          echo "=== Pod Descriptions ==="
+          kubectl describe pods -n ecommerce || true
+
+      - name: Debug - Show pod logs
+        if: failure() && (inputs.environment == 'k3d' || inputs.environment == '')
+        env:
+          KUBECONFIG: ${{ github.workspace }}/.kubeconfig
+        run: |
           echo "=== Pod Logs ==="
-          for pod in $(kubectl get pods -n msa-quality -o name); do
-            echo "Logs for $pod:"
-            kubectl logs $pod -n msa-quality --tail=100 || true
+          for pod in $(kubectl get pods -n ecommerce -o name 2>/dev/null); do
+            echo "--- Logs for $pod ---"
+            kubectl logs $pod -n ecommerce --tail=50 || true
           done
+
+      - name: Debug - Show Docker Compose logs
+        if: failure() && (inputs.environment == 'k3d' || inputs.environment == '')
+        run: |
+          echo "=== Docker Compose Logs ==="
+          cd c4ang-infra/external-services/docker
+          docker compose logs --tail=50 || docker-compose logs --tail=50 || true
