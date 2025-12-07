@@ -92,7 +92,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-northeast-2
-        continue-on-error: true  # ECR 없이도 진행 가능하도록
+          retry-max-attempts: 5  # OIDC 인증 재시도 횟수 증가
 
       - name: Setup K3d environment
         id: k3d-setup
