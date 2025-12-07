@@ -38,31 +38,26 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # =============================================================================
 
 wait_for_pods() {
-    log_info "Pod 준비 대기 중... (timeout: ${TIMEOUT}s)"
+    log_info "Pod Ready 상태 대기 중... (timeout: ${TIMEOUT}s)"
 
     export KUBECONFIG="${KUBECONFIG_FILE}"
 
-    local waited=0
+    # kubectl wait를 사용하여 모든 Pod가 Ready 상태가 될 때까지 대기
+    # condition=Ready는 컨테이너가 실제로 준비되었음을 보장
+    log_info "kubectl wait으로 Pod Ready 상태 대기..."
+    if kubectl wait --for=condition=Ready pods --all -n "${NAMESPACE}" --timeout="${TIMEOUT}s" 2>/dev/null; then
+        local ready_count
+        ready_count=$(kubectl get pods -n "${NAMESPACE}" --no-headers 2>/dev/null | wc -l | tr -d ' ')
+        log_success "모든 Pod Ready 상태 (${ready_count}개)"
+        kubectl get pods -n "${NAMESPACE}" 2>/dev/null || true
+        return 0
+    fi
 
-    while [ $waited -lt $TIMEOUT ]; do
-        local ready_pods
-        ready_pods=$(kubectl get pods -n "${NAMESPACE}" --no-headers 2>/dev/null | grep -c "Running" || echo "0")
-
-        local total_pods
-        total_pods=$(kubectl get pods -n "${NAMESPACE}" --no-headers 2>/dev/null | wc -l | tr -d ' ')
-
-        if [ "$total_pods" -gt 0 ] && [ "$ready_pods" -eq "$total_pods" ]; then
-            log_success "모든 Pod 실행 중 (${ready_pods}/${total_pods})"
-            return 0
-        fi
-
-        sleep 10
-        waited=$((waited + 10))
-        log_info "대기 중... (${waited}s/${TIMEOUT}s, ${ready_pods}/${total_pods} running)"
-    done
-
-    log_error "Pod 준비 타임아웃"
-    kubectl get pods -n "${NAMESPACE}"
+    log_error "Pod Ready 대기 타임아웃"
+    log_info "현재 Pod 상태:"
+    kubectl get pods -n "${NAMESPACE}" -o wide 2>/dev/null || true
+    log_info "Not Ready Pod 상세:"
+    kubectl get pods -n "${NAMESPACE}" -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\t"}{range .status.containerStatuses[*]}{.name}:{.ready}{" "}{end}{"\n"}{end}' 2>/dev/null || true
     return 1
 }
 
