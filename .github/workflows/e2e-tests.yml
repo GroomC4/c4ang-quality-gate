@@ -102,6 +102,11 @@ jobs:
           CLUSTER_NAME: e2e-test-cluster
           NAMESPACE: ecommerce
           SKIP_ISTIO: 'true'  # CI에서는 Istio 스킵 (리소스 절약)
+          # AWS 자격증명 전달 (ECR secret 생성에 필요)
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ env.AWS_SESSION_TOKEN }}
+          AWS_DEFAULT_REGION: ap-northeast-2
         run: |
           chmod +x ./scripts/ci/setup-k3d-env.sh
           ./scripts/ci/setup-k3d-env.sh --skip-istio
