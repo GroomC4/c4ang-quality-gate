@@ -112,7 +112,7 @@ start_external_services() {
 
     # Kafka UI 제외하고 시작 (리소스 절약)
     log_info "Docker Compose 서비스 시작 중 (Kafka UI 제외)..."
-    docker compose up -d --scale kafka-ui=0 2>/dev/null || docker-compose up -d
+    docker compose up -d --scale kafka-ui=0
 
     # 헬스체크 대기 (CI 환경이므로 짧게)
     log_info "서비스 헬스체크 대기 중..."
