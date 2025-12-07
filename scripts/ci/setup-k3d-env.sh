@@ -371,6 +371,39 @@ EOF
 }
 
 # =============================================================================
+# Phase 5-1: ECR Pull Secret 생성
+# =============================================================================
+
+create_ecr_secret() {
+    log_step "Phase 5-1: ECR Pull Secret 생성"
+
+    export KUBECONFIG="${KUBECONFIG_FILE}"
+
+    # AWS CLI가 설치되어 있고 자격증명이 있는 경우에만 실행
+    if ! command -v aws &>/dev/null; then
+        log_warn "AWS CLI가 설치되어 있지 않습니다. ECR secret 생성을 건너뜁니다."
+        return 0
+    fi
+
+    log_info "ECR 로그인 토큰 획득 중..."
+    local ecr_token
+    ecr_token=$(aws ecr get-login-password --region ap-northeast-2 2>/dev/null || echo "")
+
+    if [ -n "$ecr_token" ]; then
+        log_info "ECR secret 생성 중..."
+        kubectl create secret docker-registry ecr-secret \
+            --docker-server=963403601423.dkr.ecr.ap-northeast-2.amazonaws.com \
+            --docker-username=AWS \
+            --docker-password="$ecr_token" \
+            -n "${NAMESPACE}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+        log_success "ECR secret 생성 완료"
+    else
+        log_warn "ECR 토큰을 가져올 수 없습니다. 이미지 풀에 실패할 수 있습니다."
+    fi
+}
+
+# =============================================================================
 # Phase 6: MSA 서비스 배포 (Helm)
 # =============================================================================
 
@@ -542,6 +575,7 @@ main() {
     install_argo_rollouts
     install_istio
     create_external_services
+    create_ecr_secret        # ECR secret을 Helm 배포 전에 생성
     deploy_services
     wait_for_services
     print_summary

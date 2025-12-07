@@ -107,25 +107,7 @@ jobs:
           ./scripts/ci/setup-k3d-env.sh --skip-istio
           echo "kubeconfig=${{ github.workspace }}/.kubeconfig" >> $GITHUB_OUTPUT
 
-      - name: Create ECR pull secret
-        if: inputs.environment == 'k3d' || inputs.environment == ''
-        env:
-          KUBECONFIG: ${{ github.workspace }}/.kubeconfig
-        continue-on-error: true  # ECR secret 생성 실패해도 계속 진행
-        run: |
-          # ECR 로그인 토큰 획득
-          ECR_TOKEN=$(aws ecr get-login-password --region ap-northeast-2 2>/dev/null || echo "")
-          if [ -n "$ECR_TOKEN" ]; then
-            kubectl create secret docker-registry ecr-secret \
-              --docker-server=963403601423.dkr.ecr.ap-northeast-2.amazonaws.com \
-              --docker-username=AWS \
-              --docker-password="$ECR_TOKEN" \
-              -n ecommerce \
-              --dry-run=client -o yaml | kubectl apply -f -
-            echo "ECR secret created successfully"
-          else
-            echo "Warning: Could not get ECR token, skipping ECR secret creation"
-          fi
+      # ECR secret은 setup-k3d-env.sh 내부에서 생성됨 (Phase 5-1)
 
       - name: Wait for K3d services
         if: inputs.environment == 'k3d' || inputs.environment == ''
