@@ -228,6 +228,13 @@ install_istio() {
 
     export KUBECONFIG="${KUBECONFIG_FILE}"
 
+    # Gateway API CRD 설치 (Istio 설치 전에 필요)
+    log_info "Gateway API CRD 설치 중..."
+    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+
+    # CRD가 등록될 때까지 잠시 대기
+    sleep 3
+
     # Istio 설치 확인
     if ! command -v istioctl &>/dev/null; then
         log_info "istioctl 설치 중..."
