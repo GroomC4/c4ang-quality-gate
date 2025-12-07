@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+      - 'feature/ci-*'  # CI 관련 feature 브랜치에서도 테스트
   pull_request:
     branches:
       - main
