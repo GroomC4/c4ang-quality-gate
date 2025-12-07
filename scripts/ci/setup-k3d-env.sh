@@ -303,11 +303,13 @@ deploy_istio_config() {
     # - namespace.create=false (이미 생성됨)
     # - mTLS, JWT 인증 비활성화 (테스트 환경)
     # - crds.gatewayAPI.install=false (이미 install_istio에서 설치됨)
+    # - gatewayAPI.enabled=false (istioctl이 GatewayClass를 이미 생성함, Helm 중복 생성 방지)
     helm_args+=(
         "--set" "namespace.create=false"
         "--set" "security.mTLS.enabled=false"
         "--set" "security.jwt.enabled=false"
         "--set" "crds.gatewayAPI.install=false"
+        "--set" "gatewayAPI.enabled=false"
     )
 
     helm "${helm_args[@]}" || {
