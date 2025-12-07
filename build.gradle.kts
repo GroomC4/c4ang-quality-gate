@@ -33,7 +33,8 @@ tasks.test {
     useJUnitPlatform()
 
     systemProperty("karate.options", System.getProperty("karate.options") ?: "")
-    systemProperty("karate.env", System.getProperty("karate.env") ?: "local")
+    // 환경변수 KARATE_ENV를 우선 사용, 없으면 시스템 프로퍼티, 기본값은 dev
+    systemProperty("karate.env", System.getenv("KARATE_ENV") ?: System.getProperty("karate.env") ?: "dev")
 
     outputs.upToDateWhen { false }
 
