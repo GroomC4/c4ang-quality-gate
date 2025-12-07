@@ -23,8 +23,9 @@ function fn() {
     config.productApiUrl = 'http://localhost:8083';
     config.orderApiUrl = 'http://localhost:8084';
     config.paymentApiUrl = 'http://localhost:8085';
-    // 기본 baseUrl은 customer-api (인증 테스트용)
-    config.baseUrl = config.customerApiUrl;
+    // baseUrl은 빈 문자열로 설정 (services가 전체 URL을 포함)
+    // Karate에서 url '' + path 'http://...'는 절대 URL로 처리됨
+    config.baseUrl = '';
     // CI 환경에서는 시작이 느릴 수 있으므로 재시도 횟수 증가
     config.maxRetries = 20;
     config.retryInterval = 2000;
