@@ -235,9 +235,13 @@ install_istio() {
         export PATH="$PWD/istio-1.20.0/bin:$PATH"
     fi
 
-    # 최소 프로파일로 설치
-    log_info "Istio 최소 프로파일 설치 중..."
-    istioctl install --set profile=minimal -y
+    # default 프로파일로 설치 (istiod + istio-ingressgateway 포함)
+    log_info "Istio default 프로파일 설치 중..."
+    istioctl install --set profile=default -y
+
+    # Ingress Gateway가 준비될 때까지 대기
+    log_info "Istio Ingress Gateway 준비 대기..."
+    kubectl wait --for=condition=available deployment/istio-ingressgateway -n istio-system --timeout=120s || true
 
     # 네임스페이스에 사이드카 인젝션 활성화
     kubectl label namespace "${NAMESPACE}" istio-injection=enabled --overwrite
