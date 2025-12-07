@@ -18,14 +18,16 @@ function fn() {
   if (env === 'ci') {
     // CI 환경 (k3d) - Istio Gateway 없이 각 서비스로 직접 port-forward
     // 각 서비스별 포트: customer-api(8081), store-api(8082), product-api(8083), order-api(8084), payment-api(8085)
-    config.customerApiUrl = 'http://localhost:8081';
-    config.storeApiUrl = 'http://localhost:8082';
-    config.productApiUrl = 'http://localhost:8083';
-    config.orderApiUrl = 'http://localhost:8084';
-    config.paymentApiUrl = 'http://localhost:8085';
-    // baseUrl은 빈 문자열로 설정 (services가 전체 URL을 포함)
-    // Karate에서 url '' + path 'http://...'는 절대 URL로 처리됨
-    config.baseUrl = '';
+    // baseUrl은 customer-api로 설정 (대부분의 테스트가 auth로 시작)
+    config.baseUrl = 'http://localhost:8081';
+    // 서비스별 baseUrl (feature에서 url을 변경할 때 사용)
+    config.baseUrls = {
+      customer: 'http://localhost:8081',
+      store: 'http://localhost:8082',
+      product: 'http://localhost:8083',
+      order: 'http://localhost:8084',
+      payment: 'http://localhost:8085'
+    };
     // CI 환경에서는 시작이 느릴 수 있으므로 재시도 횟수 증가
     config.maxRetries = 20;
     config.retryInterval = 2000;
@@ -55,55 +57,39 @@ function fn() {
     config.headers['Host'] = config.gatewayHost;
   }
 
-  // Service endpoints
-  // CI 환경에서는 각 서비스별 URL 사용, 그 외 환경에서는 Gateway 라우팅 사용
-  if (env === 'ci') {
-    // CI 환경: 각 서비스로 직접 접근
-    config.services = {
-      // Auth endpoints (customer-api - port 8081)
-      customerSignup: config.customerApiUrl + '/api/v1/auth/customers/signup',
-      customerLogin: config.customerApiUrl + '/api/v1/auth/customers/login',
-      customerLogout: config.customerApiUrl + '/api/v1/auth/customers/logout',
-      ownerSignup: config.customerApiUrl + '/api/v1/auth/owners/signup',
-      ownerLogin: config.customerApiUrl + '/api/v1/auth/owners/login',
-      ownerLogout: config.customerApiUrl + '/api/v1/auth/owners/logout',
-      tokenRefresh: config.customerApiUrl + '/api/v1/auth/refresh',
+  // Service endpoints - 모든 환경에서 상대 경로 사용
+  // CI 환경에서는 feature 파일에서 baseUrls를 사용해 서비스별 URL 선택
+  config.services = {
+    // Auth endpoints (customer-api)
+    customerSignup: '/api/v1/auth/customers/signup',
+    customerLogin: '/api/v1/auth/customers/login',
+    customerLogout: '/api/v1/auth/customers/logout',
+    ownerSignup: '/api/v1/auth/owners/signup',
+    ownerLogin: '/api/v1/auth/owners/login',
+    ownerLogout: '/api/v1/auth/owners/logout',
+    tokenRefresh: '/api/v1/auth/refresh',
 
-      // Store endpoints (store-api - port 8082)
-      stores: config.storeApiUrl + '/api/v1/stores',
+    // Store endpoints (store-api)
+    stores: '/api/v1/stores',
 
-      // Product endpoints (product-api - port 8083)
-      products: config.productApiUrl + '/api/v1/products',
+    // Product endpoints (product-api)
+    products: '/api/v1/products',
 
-      // Order endpoints (order-api - port 8084)
-      orders: config.orderApiUrl + '/api/v1/orders',
+    // Order endpoints (order-api)
+    orders: '/api/v1/orders',
 
-      // Payment endpoints (payment-api - port 8085)
-      payments: config.paymentApiUrl + '/api/v1/payments'
-    };
-  } else {
-    // dev/prod 환경: Gateway 라우팅 사용 (상대 경로)
-    config.services = {
-      // Auth endpoints (customer-api로 라우팅)
-      customerSignup: '/api/v1/auth/customers/signup',
-      customerLogin: '/api/v1/auth/customers/login',
-      customerLogout: '/api/v1/auth/customers/logout',
-      ownerSignup: '/api/v1/auth/owners/signup',
-      ownerLogin: '/api/v1/auth/owners/login',
-      ownerLogout: '/api/v1/auth/owners/logout',
-      tokenRefresh: '/api/v1/auth/refresh',
+    // Payment endpoints (payment-api)
+    payments: '/api/v1/payments'
+  };
 
-      // Store endpoints (store-api로 라우팅)
-      stores: '/api/v1/stores',
-
-      // Product endpoints (product-api로 라우팅)
-      products: '/api/v1/products',
-
-      // Order endpoints (order-api로 라우팅)
-      orders: '/api/v1/orders',
-
-      // Payment endpoints (payment-api로 라우팅)
-      payments: '/api/v1/payments'
+  // dev/prod 환경에서는 baseUrls를 baseUrl과 동일하게 설정 (모든 서비스가 Gateway를 통해 접근)
+  if (env !== 'ci') {
+    config.baseUrls = {
+      customer: config.baseUrl,
+      store: config.baseUrl,
+      product: config.baseUrl,
+      order: config.baseUrl,
+      payment: config.baseUrl
     };
   }
 

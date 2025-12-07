@@ -2,7 +2,7 @@
 Feature: Create Owner and Login Helper
 
   Scenario: Create owner and get access token
-    * url baseUrl
+    * url baseUrls.customer
     * def email = __arg.email || generateOwnerEmail()
     * def username = __arg.username || generateUsername()
     * def password = __arg.password || testPassword

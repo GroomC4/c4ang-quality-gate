@@ -2,7 +2,6 @@
 Feature: Full Purchase Flow E2E
 
   Background:
-    * url baseUrl
     * configure retry = { count: 20, interval: 1000 }
 
   @happy-path
@@ -14,6 +13,7 @@ Feature: Full Purchase Flow E2E
     * def ownerEmail = generateOwnerEmail()
     * def ownerUsername = generateUsername()
 
+    * url baseUrls.customer
     Given path services.ownerSignup
     And request
       """
@@ -40,6 +40,7 @@ Feature: Full Purchase Flow E2E
     # ============================================
     * print '=== Step 2: Create store ==='
 
+    * url baseUrls.store
     Given path services.stores
     And header Authorization = 'Bearer ' + ownerToken
     And request
@@ -59,6 +60,7 @@ Feature: Full Purchase Flow E2E
     # ============================================
     * print '=== Step 3: Register product ==='
 
+    * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
     And request
@@ -84,6 +86,7 @@ Feature: Full Purchase Flow E2E
     * def customerEmail = generateCustomerEmail()
     * def customerUsername = generateUsername()
 
+    * url baseUrls.customer
     Given path services.customerSignup
     And request
       """
@@ -113,6 +116,7 @@ Feature: Full Purchase Flow E2E
     * def orderQuantity = 2
     * def expectedTotal = productPrice * orderQuantity
 
+    * url baseUrls.order
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
     And request
@@ -157,6 +161,7 @@ Feature: Full Purchase Flow E2E
     * print '=== Step 7: Request payment ==='
     * def paymentId = uuid()
 
+    * url baseUrls.payment
     Given path services.payments + '/request'
     And header Authorization = 'Bearer ' + customerToken
     And request
@@ -179,6 +184,7 @@ Feature: Full Purchase Flow E2E
     # ============================================
     * print '=== Step 8: Verify final order status ==='
 
+    * url baseUrls.order
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
     And retry until response.status == 'PAYMENT_COMPLETED' || response.status == 'PAYMENT_PENDING' || response.status == 'PAYMENT_FAILED'

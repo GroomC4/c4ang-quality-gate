@@ -2,7 +2,7 @@
 Feature: Store Update
 
   Background:
-    * url baseUrl
+    * url baseUrls.store
     * def storePath = services.stores
 
   @happy-path

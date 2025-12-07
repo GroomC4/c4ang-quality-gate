@@ -2,7 +2,7 @@
 Feature: Owner Login
 
   Background:
-    * url baseUrl
+    * url baseUrls.customer
     * def signupPath = services.ownerSignup
     * def loginPath = services.ownerLogin
 

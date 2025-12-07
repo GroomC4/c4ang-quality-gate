@@ -2,7 +2,7 @@
 Feature: Product Search
 
   Background:
-    * url baseUrl
+    * url baseUrls.product
     * def productPath = services.products
 
   @happy-path

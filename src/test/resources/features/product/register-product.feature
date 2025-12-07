@@ -2,7 +2,7 @@
 Feature: Product Registration
 
   Background:
-    * url baseUrl
+    * url baseUrls.product
     * def productPath = services.products
 
   @happy-path

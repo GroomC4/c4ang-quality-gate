@@ -2,7 +2,7 @@
 Feature: Order Creation
 
   Background:
-    * url baseUrl
+    * url baseUrls.order
     * def orderPath = services.orders
 
   @happy-path

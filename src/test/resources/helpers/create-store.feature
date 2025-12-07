@@ -2,7 +2,7 @@
 Feature: Create Store Helper
 
   Scenario: Create store with owner token
-    * url baseUrl
+    * url baseUrls.store
     * def token = __arg.token
     * def storeName = __arg.name || 'Test Store ' + uuid().substring(0, 8)
     * def storeDescription = __arg.description || 'Test store description'

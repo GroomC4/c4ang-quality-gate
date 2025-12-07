@@ -2,7 +2,7 @@
 Feature: Payment Query
 
   Background:
-    * url baseUrl
+    * url baseUrls.payment
     * def paymentPath = services.payments
 
   @happy-path

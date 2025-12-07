@@ -2,7 +2,7 @@
 Feature: Customer Login
 
   Background:
-    * url baseUrl
+    * url baseUrls.customer
     * def signupPath = services.customerSignup
     * def loginPath = services.customerLogin
 

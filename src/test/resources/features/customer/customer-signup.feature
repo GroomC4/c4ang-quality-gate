@@ -2,7 +2,7 @@
 Feature: Customer Signup
 
   Background:
-    * url baseUrl
+    * url baseUrls.customer
     * def signupPath = services.customerSignup
 
   @happy-path

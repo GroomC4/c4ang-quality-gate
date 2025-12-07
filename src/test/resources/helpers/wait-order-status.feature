@@ -2,7 +2,7 @@
 Feature: Wait for Order Status Helper
 
   Scenario: Poll order status until expected status or timeout
-    * url baseUrl
+    * url baseUrls.order
     * def orderId = __arg.orderId
     * def expectedStatus = __arg.expectedStatus
     * def maxWait = __arg.maxWait || 15000

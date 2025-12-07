@@ -2,7 +2,7 @@
 Feature: Payment Request
 
   Background:
-    * url baseUrl
+    * url baseUrls.payment
     * def paymentPath = services.payments
     * def orderPath = services.orders
 
@@ -20,6 +20,8 @@ Feature: Payment Request
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def customerToken = customer.accessToken
 
+    # Switch to order service
+    * url baseUrls.order
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
     And request
@@ -50,7 +52,8 @@ Feature: Payment Request
     Then status 200
     And assert response.status == 'ORDER_CONFIRMED'
 
-    # Request payment
+    # Request payment - switch back to payment service
+    * url baseUrls.payment
     * def paymentId = uuid()
     Given path paymentPath + '/request'
     And header Authorization = 'Bearer ' + customerToken

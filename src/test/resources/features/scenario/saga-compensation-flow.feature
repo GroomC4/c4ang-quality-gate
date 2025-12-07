@@ -2,7 +2,6 @@
 Feature: SAGA Compensation Flow E2E
 
   Background:
-    * url baseUrl
     * configure retry = { count: 20, interval: 1000 }
 
   @error-case
@@ -17,6 +16,7 @@ Feature: SAGA Compensation Flow E2E
     * def storeId = store.storeId
 
     # Create product with very limited stock
+    * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
     And request
@@ -45,6 +45,7 @@ Feature: SAGA Compensation Flow E2E
     # ============================================
     * print '=== Attempting to order 100 units (stock: 5) ==='
 
+    * url baseUrls.order
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
     And request
@@ -94,6 +95,7 @@ Feature: SAGA Compensation Flow E2E
     * def store = call read('classpath:helpers/create-store.feature') { token: '#(ownerToken)' }
     * def storeId = store.storeId
 
+    * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
     And request
@@ -115,6 +117,7 @@ Feature: SAGA Compensation Flow E2E
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def customerToken = customer.accessToken
 
+    * url baseUrls.order
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
     And request

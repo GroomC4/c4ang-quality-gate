@@ -2,7 +2,7 @@
 Feature: Create Product Helper
 
   Scenario: Create product with owner token and store
-    * url baseUrl
+    * url baseUrls.product
     * def token = __arg.token
     * def storeId = __arg.storeId
     * def productName = __arg.name || 'Test Product ' + uuid().substring(0, 8)

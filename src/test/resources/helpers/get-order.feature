@@ -2,7 +2,7 @@
 Feature: Get Order Helper
 
   Scenario: Get order by ID
-    * url baseUrl
+    * url baseUrls.order
     * def orderId = __arg.orderId
     * def token = __arg.token
 
