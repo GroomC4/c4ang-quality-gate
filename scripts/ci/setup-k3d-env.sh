@@ -380,8 +380,8 @@ deploy_services() {
     # 서비스 목록
     local services=("customer-service" "order-service" "product-service" "store-service" "payment-service" "saga-tracker")
 
-    # 공유 AnalysisTemplate이 이미 생성되었는지 확인하는 플래그
-    local analysis_template_created="false"
+    # 첫 번째 서비스 배포 여부
+    local first_service_deployed="false"
 
     for service in "${services[@]}"; do
         local chart_path="${charts_dir}/${service}"
@@ -399,6 +399,16 @@ deploy_services() {
         helm dependency build "${chart_path}" 2>/dev/null || {
             log_warn "Dependency build 실패 (무시): ${service}"
         }
+
+        # 첫 번째 서비스 배포 후, AnalysisTemplate ownership 제거
+        # 이렇게 하면 다른 서비스들이 동일한 리소스를 참조할 수 있음
+        if [ "$first_service_deployed" == "true" ]; then
+            log_info "AnalysisTemplate ownership annotation 제거 중..."
+            kubectl annotate analysistemplate post-promotion-analysis -n "${NAMESPACE}" \
+                meta.helm.sh/release-name- meta.helm.sh/release-namespace- 2>/dev/null || true
+            kubectl label analysistemplate post-promotion-analysis -n "${NAMESPACE}" \
+                app.kubernetes.io/managed-by- 2>/dev/null || true
+        fi
 
         # Helm 설치/업그레이드
         local helm_args=(
@@ -421,18 +431,13 @@ deploy_services() {
         # CI 환경에서는 Redis subchart 비활성화 (ExternalName 서비스 사용)
         helm_args+=("--set" "redis.enabled=false")
 
-        # AnalysisTemplate 충돌 방지: 첫 번째 서비스만 생성
-        if [ "$analysis_template_created" == "true" ]; then
-            helm_args+=("--set" "analysisTemplate.enabled=false")
-        fi
-
         helm "${helm_args[@]}" || {
             log_warn "${service} 배포 실패, 계속 진행..."
         }
 
         # 첫 번째 성공적인 배포 후 플래그 설정
-        if [ "$analysis_template_created" == "false" ]; then
-            analysis_template_created="true"
+        if [ "$first_service_deployed" == "false" ]; then
+            first_service_deployed="true"
         fi
     done
 
