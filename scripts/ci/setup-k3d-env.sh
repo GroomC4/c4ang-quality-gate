@@ -400,14 +400,13 @@ deploy_services() {
             log_warn "Dependency build 실패 (무시): ${service}"
         }
 
-        # 첫 번째 서비스 배포 후, AnalysisTemplate ownership 제거
-        # 이렇게 하면 다른 서비스들이 동일한 리소스를 참조할 수 있음
+        # 첫 번째 서비스 배포 후, AnalysisTemplate 삭제
+        # 각 helm chart가 동일한 AnalysisTemplate을 생성하려 하므로
+        # 두 번째 서비스부터는 삭제 후 helm이 새로 생성하게 함
         if [ "$first_service_deployed" == "true" ]; then
-            log_info "AnalysisTemplate ownership annotation 제거 중..."
-            kubectl annotate analysistemplate post-promotion-analysis -n "${NAMESPACE}" \
-                meta.helm.sh/release-name- meta.helm.sh/release-namespace- 2>/dev/null || true
-            kubectl label analysistemplate post-promotion-analysis -n "${NAMESPACE}" \
-                app.kubernetes.io/managed-by- 2>/dev/null || true
+            log_info "AnalysisTemplate 삭제 중 (충돌 방지)..."
+            kubectl delete analysistemplate post-promotion-analysis -n "${NAMESPACE}" 2>/dev/null || true
+            kubectl delete analysistemplate smoke-test-analysis -n "${NAMESPACE}" 2>/dev/null || true
         fi
 
         # Helm 설치/업그레이드
