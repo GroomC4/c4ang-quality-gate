@@ -10,12 +10,14 @@ Feature: Product Search
     # Setup: Create owner, store, and products
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)' }
+    * def userId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)', userId: '#(userId)' }
     * def storeId = store.storeId
 
     # Create product
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
@@ -42,11 +44,13 @@ Feature: Product Search
     # Setup: Create owner, store, and product
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)' }
+    * def userId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)', userId: '#(userId)' }
     * def storeId = store.storeId
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
@@ -75,18 +79,21 @@ Feature: Product Search
     # Setup: Create owner, store, and products
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)' }
+    * def userId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)', userId: '#(userId)' }
     * def storeId = store.storeId
 
     # Create multiple products
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request { "storeId": "#(storeId)", "name": "Product 1", "price": 10000, "stockQuantity": 10 }
     When method POST
     Then status 201
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request { "storeId": "#(storeId)", "name": "Product 2", "price": 20000, "stockQuantity": 20 }
     When method POST
     Then status 201
@@ -94,6 +101,7 @@ Feature: Product Search
     # Get owner's products
     Given path productPath + '/owner'
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And param storeId = storeId
     When method GET
     Then status 200

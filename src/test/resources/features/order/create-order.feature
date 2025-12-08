@@ -10,9 +10,10 @@ Feature: Order Creation
     # Setup: Create owner with store and product
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def ownerToken = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(ownerToken)' }
+    * def ownerId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(ownerToken)', userId: '#(ownerId)' }
     * def storeId = store.storeId
-    * def product = call read('classpath:helpers/create-product.feature') { token: '#(ownerToken)', storeId: '#(storeId)', price: 10000, stockQuantity: 100 }
+    * def product = call read('classpath:helpers/create-product.feature') { token: '#(ownerToken)', userId: '#(ownerId)', storeId: '#(storeId)', price: 10000, stockQuantity: 100 }
     * def productId = product.productId
 
     # Setup: Create customer
@@ -55,9 +56,10 @@ Feature: Order Creation
     # Setup: Create owner with store and product
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def ownerToken = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(ownerToken)' }
+    * def ownerId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(ownerToken)', userId: '#(ownerId)' }
     * def storeId = store.storeId
-    * def product = call read('classpath:helpers/create-product.feature') { token: '#(ownerToken)', storeId: '#(storeId)', stockQuantity: 100 }
+    * def product = call read('classpath:helpers/create-product.feature') { token: '#(ownerToken)', userId: '#(ownerId)', storeId: '#(storeId)', stockQuantity: 100 }
     * def productId = product.productId
 
     # Setup: Create customer

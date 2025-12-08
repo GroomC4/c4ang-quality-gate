@@ -10,11 +10,13 @@ Feature: Product Deletion
     # Setup: Create owner, store, and product
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)' }
+    * def userId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)', userId: '#(userId)' }
     * def storeId = store.storeId
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
@@ -31,6 +33,7 @@ Feature: Product Deletion
     # Delete product
     Given path productPath + '/' + productId
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request { "storeId": "#(storeId)" }
     When method PATCH
     Then status 200
@@ -42,11 +45,13 @@ Feature: Product Deletion
     # Setup: Create owner, store, and product
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)' }
+    * def userId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)', userId: '#(userId)' }
     * def storeId = store.storeId
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
@@ -63,6 +68,7 @@ Feature: Product Deletion
     # Hide product
     Given path productPath + '/' + productId + '/hide'
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request { "storeId": "#(storeId)" }
     When method PATCH
     Then status 200

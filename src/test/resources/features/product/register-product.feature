@@ -10,11 +10,13 @@ Feature: Product Registration
     # Setup: Create owner, login, and create store
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)' }
+    * def userId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)', userId: '#(userId)' }
     * def storeId = store.storeId
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {

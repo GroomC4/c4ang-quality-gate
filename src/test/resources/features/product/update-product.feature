@@ -10,11 +10,13 @@ Feature: Product Update
     # Setup: Create owner, store, and product
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)' }
+    * def userId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(token)', userId: '#(userId)' }
     * def storeId = store.storeId
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
@@ -31,6 +33,7 @@ Feature: Product Update
     # Update product
     Given path productPath + '/' + productId
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
@@ -54,11 +57,13 @@ Feature: Product Update
     # Setup: Create first owner's product
     * def owner1 = call read('classpath:helpers/create-owner-and-login.feature')
     * def token1 = owner1.accessToken
-    * def store1 = call read('classpath:helpers/create-store.feature') { token: '#(token1)' }
+    * def userId1 = owner1.userId
+    * def store1 = call read('classpath:helpers/create-store.feature') { token: '#(token1)', userId: '#(userId1)' }
     * def storeId1 = store1.storeId
 
     Given path productPath
     And header Authorization = 'Bearer ' + token1
+    And header X-User-Id = userId1
     And request
       """
       {
@@ -75,10 +80,12 @@ Feature: Product Update
     # Setup: Create second owner
     * def owner2 = call read('classpath:helpers/create-owner-and-login.feature')
     * def token2 = owner2.accessToken
+    * def userId2 = owner2.userId
 
     # Try to update with different owner
     Given path productPath + '/' + productId
     And header Authorization = 'Bearer ' + token2
+    And header X-User-Id = userId2
     And request
       """
       {

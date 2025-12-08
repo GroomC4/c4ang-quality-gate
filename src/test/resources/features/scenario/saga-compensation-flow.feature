@@ -12,13 +12,15 @@ Feature: SAGA Compensation Flow E2E
     * print '=== Setup: Create store with limited stock product ==='
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def ownerToken = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(ownerToken)' }
+    * def ownerId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(ownerToken)', userId: '#(ownerId)' }
     * def storeId = store.storeId
 
     # Create product with very limited stock
     * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
+    And header X-User-Id = ownerId
     And request
       """
       {
@@ -92,12 +94,14 @@ Feature: SAGA Compensation Flow E2E
     * print '=== Setup ==='
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def ownerToken = owner.accessToken
-    * def store = call read('classpath:helpers/create-store.feature') { token: '#(ownerToken)' }
+    * def ownerId = owner.userId
+    * def store = call read('classpath:helpers/create-store.feature') { token: '#(ownerToken)', userId: '#(ownerId)' }
     * def storeId = store.storeId
 
     * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
+    And header X-User-Id = ownerId
     And request
       """
       {
