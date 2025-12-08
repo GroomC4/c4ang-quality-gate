@@ -301,13 +301,14 @@ deploy_istio_config() {
 
     # CI 환경 특화 설정
     # - namespace.create=false (이미 생성됨)
-    # - mTLS, JWT 인증 비활성화 (테스트 환경)
+    # - mTLS 비활성화 (테스트 환경에서 복잡함 방지)
+    # - JWT 활성화 (X-User-Id 헤더 주입에 필수!)
     # - crds.gatewayAPI.install=false (이미 install_istio에서 설치됨)
     # - gatewayAPI.enabled=false (istioctl이 GatewayClass를 이미 생성함, Helm 중복 생성 방지)
     helm_args+=(
         "--set" "namespace.create=false"
         "--set" "security.mTLS.enabled=false"
-        "--set" "security.jwt.enabled=false"
+        "--set" "security.jwt.enabled=true"
         "--set" "crds.gatewayAPI.install=false"
         "--set" "gatewayAPI.enabled=false"
     )
