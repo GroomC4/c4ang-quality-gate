@@ -252,6 +252,35 @@ jobs:
           echo "=== Events (최근 오류) ==="
           kubectl get events -n ecommerce --sort-by='.lastTimestamp' | tail -30 || true
 
+      - name: Debug - Show Istio Security Resources
+        if: failure() && (inputs.environment == 'dev' || inputs.environment == '')
+        env:
+          KUBECONFIG: ${{ github.workspace }}/.kubeconfig
+        run: |
+          echo "=== RequestAuthentication (ecommerce namespace) ==="
+          kubectl get requestauthentication -n ecommerce -o wide || true
+          echo ""
+          echo "=== RequestAuthentication YAML ==="
+          kubectl get requestauthentication -n ecommerce -o yaml || true
+          echo ""
+          echo "=== AuthorizationPolicy (ecommerce namespace) ==="
+          kubectl get authorizationpolicy -n ecommerce -o wide || true
+          echo ""
+          echo "=== Gateway Pod Labels ==="
+          kubectl get pods -n ecommerce -l istio.io/gateway-name=ecommerce-gateway --show-labels || true
+          echo ""
+          echo "=== Gateway Status Details ==="
+          kubectl describe gateway ecommerce-gateway -n ecommerce || true
+          echo ""
+          echo "=== Istio Proxy Config (Gateway) ==="
+          GATEWAY_POD=$(kubectl get pods -n ecommerce -l istio.io/gateway-name=ecommerce-gateway -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+          if [ -n "$GATEWAY_POD" ]; then
+            echo "Gateway Pod: $GATEWAY_POD"
+            kubectl exec -n ecommerce $GATEWAY_POD -- curl -s localhost:15000/config_dump | jq '.configs[] | select(.["@type"] | contains("listeners"))' 2>/dev/null | head -200 || true
+          else
+            echo "No gateway pod found"
+          fi
+
       - name: Debug - Show pod descriptions
         if: failure() && (inputs.environment == 'dev' || inputs.environment == '')
         env:
