@@ -6,10 +6,11 @@ on:
       - main
       - develop
       - 'feature/ci-*'  # CI 관련 feature 브랜치에서도 테스트
-  pull_request:
-    branches:
-      - main
-      - develop
+  # pull_request는 push와 중복 실행되므로 비활성화
+  # pull_request:
+  #   branches:
+  #     - main
+  #     - develop
   workflow_dispatch:
     inputs:
       environment:
