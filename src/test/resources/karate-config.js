@@ -79,6 +79,9 @@ function fn() {
   karate.configure('connectTimeout', config.apiTimeout);
   karate.configure('readTimeout', config.apiTimeout);
 
+  // Apply default headers to all requests (including Host header for Gateway routing)
+  karate.configure('headers', config.headers);
+
   // UUID generator helper
   config.uuid = function() {
     return java.util.UUID.randomUUID().toString();
