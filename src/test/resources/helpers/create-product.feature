@@ -2,17 +2,16 @@
 Feature: Create Product Helper
 
   Scenario: Create product with owner token and store
-    * url baseUrls.product
-    * def token = __arg.token
-    * def userId = __arg.userId
-    * def storeId = __arg.storeId
-    * def productName = __arg.name || 'Test Product ' + uuid().substring(0, 8)
-    * def price = __arg.price || 10000
-    * def stockQuantity = __arg.stockQuantity || 100
+    * def args = __arg || {}
+    * def token = args.token
+    * def storeId = args.storeId
+    * def productName = args.name || 'Test Product ' + uuid().substring(0, 8)
+    * def price = args.price || 10000
+    * def stockQuantity = args.stockQuantity || 100
 
-    Given path services.products
+    Given url baseUrls.product
+    And path services.products
     And header Authorization = 'Bearer ' + token
-    And header X-User-Id = userId
     And request
       """
       {

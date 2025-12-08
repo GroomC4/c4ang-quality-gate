@@ -101,8 +101,8 @@ jobs:
           INFRA_REPO_PATH: ${{ github.workspace }}/c4ang-infra
           CLUSTER_NAME: e2e-test-cluster
           NAMESPACE: ecommerce
-          # CI 환경에서는 Istio 스킵 (Gateway API 통합 문제 회피)
-          SKIP_ISTIO: 'true'
+          # CI 환경에서도 Istio Gateway 사용 (운영과 동일한 환경)
+          SKIP_ISTIO: 'false'
           # AWS 자격증명 전달 (ECR secret 생성에 필요)
           AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
@@ -120,7 +120,7 @@ jobs:
         env:
           KUBECONFIG: ${{ steps.k3d-setup.outputs.kubeconfig }}
           NAMESPACE: ecommerce
-          SKIP_ISTIO: 'true'
+          SKIP_ISTIO: 'false'
         run: |
           chmod +x ./scripts/ci/wait-for-services.sh
           ./scripts/ci/wait-for-services.sh --timeout 300
@@ -153,8 +153,8 @@ jobs:
             echo "karate_env=prod" >> $GITHUB_OUTPUT
             echo "base_url=${{ secrets.PROD_API_URL }}" >> $GITHUB_OUTPUT
           else
-            # CI 환경 (k3d) - Istio Gateway 없이 직접 서비스 접근
-            echo "karate_env=ci" >> $GITHUB_OUTPUT
+            # CI 환경 (k3d) - Istio Gateway를 통해 접근 (운영과 동일)
+            echo "karate_env=dev" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup port-forward (dev only)
@@ -162,29 +162,30 @@ jobs:
         env:
           KUBECONFIG: ${{ steps.k3d-setup.outputs.kubeconfig }}
         run: |
-          # CI 환경: 각 서비스로 직접 port-forward (Istio Gateway 우회)
-          # 포트 18081-18085 사용 (8081은 schema-registry가 사용하므로 충돌 방지)
-          # customer-api: 18081, store-api: 18082, product-api: 18083, order-api: 18084, payment-api: 18085
-          kubectl port-forward svc/customer-api 18081:80 -n ecommerce &
-          kubectl port-forward svc/store-api 18082:80 -n ecommerce &
-          kubectl port-forward svc/product-api 18083:80 -n ecommerce &
-          kubectl port-forward svc/order-api 18084:80 -n ecommerce &
-          kubectl port-forward svc/payment-api 18085:80 -n ecommerce &
+          # Istio Ingress Gateway로 port-forward (운영과 동일한 방식)
+          # Gateway가 JWT 검증 후 X-User-Id 헤더를 주입함
+          echo "Setting up port-forward to Istio Ingress Gateway..."
+
+          # Istio Gateway 상태 확인
+          echo "Checking Istio Gateway status..."
+          kubectl get gateway -n ecommerce || true
+          kubectl get httproute -n ecommerce || true
+          kubectl get svc -n istio-system | grep ingressgateway || true
+
+          # Istio Ingress Gateway로 port-forward (8080 -> 80)
+          kubectl port-forward svc/istio-ingressgateway 8080:80 -n istio-system &
 
           # 포트 준비 대기
           sleep 10
 
           # 포트 포워딩 확인
           echo "Checking port-forward status..."
-          nc -z localhost 18081 && echo "Port 18081 (customer-api) is ready" || echo "Port 18081 is not ready"
-          nc -z localhost 18082 && echo "Port 18082 (store-api) is ready" || echo "Port 18082 is not ready"
-          nc -z localhost 18083 && echo "Port 18083 (product-api) is ready" || echo "Port 18083 is not ready"
-          nc -z localhost 18084 && echo "Port 18084 (order-api) is ready" || echo "Port 18084 is not ready"
-          nc -z localhost 18085 && echo "Port 18085 (payment-api) is ready" || echo "Port 18085 is not ready"
+          nc -z localhost 8080 && echo "Port 8080 (Istio Gateway) is ready" || echo "Port 8080 is not ready"
 
           # 서비스 상태 확인
           echo "Services status:"
           kubectl get svc -n ecommerce || true
+          kubectl get pods -n istio-system || true
 
       - name: Run E2E tests
         env:
