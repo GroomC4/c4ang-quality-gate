@@ -309,7 +309,7 @@ deploy_istio_config() {
         "--set" "namespace.create=false"
         "--set" "security.mTLS.enabled=false"
         "--set" "security.jwt.enabled=true"
-        "--set" "security.authorizationPolicy.enabled=false"
+        "--set" "security.authorizationPolicy.enabled=true"
         "--set" "crds.gatewayAPI.install=false"
         "--set" "gatewayAPI.enabled=false"
     )
