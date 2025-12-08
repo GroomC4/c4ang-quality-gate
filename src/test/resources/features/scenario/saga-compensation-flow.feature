@@ -20,7 +20,6 @@ Feature: SAGA Compensation Flow E2E
     * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
-    And header X-User-Id = ownerId
     And request
       """
       {
@@ -101,7 +100,6 @@ Feature: SAGA Compensation Flow E2E
     * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
-    And header X-User-Id = ownerId
     And request
       """
       {

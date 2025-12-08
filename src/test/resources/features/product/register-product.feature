@@ -16,7 +16,6 @@ Feature: Product Registration
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
-    And header X-User-Id = userId
     And request
       """
       {

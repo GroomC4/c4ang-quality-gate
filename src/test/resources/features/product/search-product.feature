@@ -17,7 +17,6 @@ Feature: Product Search
     # Create product
     Given path productPath
     And header Authorization = 'Bearer ' + token
-    And header X-User-Id = userId
     And request
       """
       {
@@ -50,7 +49,6 @@ Feature: Product Search
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
-    And header X-User-Id = userId
     And request
       """
       {
@@ -86,14 +84,12 @@ Feature: Product Search
     # Create multiple products
     Given path productPath
     And header Authorization = 'Bearer ' + token
-    And header X-User-Id = userId
     And request { "storeId": "#(storeId)", "name": "Product 1", "price": 10000, "stockQuantity": 10 }
     When method POST
     Then status 201
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
-    And header X-User-Id = userId
     And request { "storeId": "#(storeId)", "name": "Product 2", "price": 20000, "stockQuantity": 20 }
     When method POST
     Then status 201
@@ -101,7 +97,6 @@ Feature: Product Search
     # Get owner's products
     Given path productPath + '/owner'
     And header Authorization = 'Bearer ' + token
-    And header X-User-Id = userId
     And param storeId = storeId
     When method GET
     Then status 200

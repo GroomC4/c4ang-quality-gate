@@ -16,7 +16,6 @@ Feature: Product Update
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
-    And header X-User-Id = userId
     And request
       """
       {
@@ -33,7 +32,6 @@ Feature: Product Update
     # Update product
     Given path productPath + '/' + productId
     And header Authorization = 'Bearer ' + token
-    And header X-User-Id = userId
     And request
       """
       {
@@ -63,7 +61,6 @@ Feature: Product Update
 
     Given path productPath
     And header Authorization = 'Bearer ' + token1
-    And header X-User-Id = userId1
     And request
       """
       {
@@ -85,7 +82,6 @@ Feature: Product Update
     # Try to update with different owner
     Given path productPath + '/' + productId
     And header Authorization = 'Bearer ' + token2
-    And header X-User-Id = userId2
     And request
       """
       {
