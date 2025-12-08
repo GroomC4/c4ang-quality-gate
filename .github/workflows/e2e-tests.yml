@@ -163,23 +163,24 @@ jobs:
           KUBECONFIG: ${{ steps.k3d-setup.outputs.kubeconfig }}
         run: |
           # CI 환경: 각 서비스로 직접 port-forward (Istio Gateway 우회)
-          # customer-api: 8081, store-api: 8082, product-api: 8083, order-api: 8084, payment-api: 8085
-          kubectl port-forward svc/customer-api 8081:80 -n ecommerce &
-          kubectl port-forward svc/store-api 8082:80 -n ecommerce &
-          kubectl port-forward svc/product-api 8083:80 -n ecommerce &
-          kubectl port-forward svc/order-api 8084:80 -n ecommerce &
-          kubectl port-forward svc/payment-api 8085:80 -n ecommerce &
+          # 포트 18081-18085 사용 (8081은 schema-registry가 사용하므로 충돌 방지)
+          # customer-api: 18081, store-api: 18082, product-api: 18083, order-api: 18084, payment-api: 18085
+          kubectl port-forward svc/customer-api 18081:80 -n ecommerce &
+          kubectl port-forward svc/store-api 18082:80 -n ecommerce &
+          kubectl port-forward svc/product-api 18083:80 -n ecommerce &
+          kubectl port-forward svc/order-api 18084:80 -n ecommerce &
+          kubectl port-forward svc/payment-api 18085:80 -n ecommerce &
 
           # 포트 준비 대기
           sleep 10
 
           # 포트 포워딩 확인
           echo "Checking port-forward status..."
-          nc -z localhost 8081 && echo "Port 8081 (customer-api) is ready" || echo "Port 8081 is not ready"
-          nc -z localhost 8082 && echo "Port 8082 (store-api) is ready" || echo "Port 8082 is not ready"
-          nc -z localhost 8083 && echo "Port 8083 (product-api) is ready" || echo "Port 8083 is not ready"
-          nc -z localhost 8084 && echo "Port 8084 (order-api) is ready" || echo "Port 8084 is not ready"
-          nc -z localhost 8085 && echo "Port 8085 (payment-api) is ready" || echo "Port 8085 is not ready"
+          nc -z localhost 18081 && echo "Port 18081 (customer-api) is ready" || echo "Port 18081 is not ready"
+          nc -z localhost 18082 && echo "Port 18082 (store-api) is ready" || echo "Port 18082 is not ready"
+          nc -z localhost 18083 && echo "Port 18083 (product-api) is ready" || echo "Port 18083 is not ready"
+          nc -z localhost 18084 && echo "Port 18084 (order-api) is ready" || echo "Port 18084 is not ready"
+          nc -z localhost 18085 && echo "Port 18085 (payment-api) is ready" || echo "Port 18085 is not ready"
 
           # 서비스 상태 확인
           echo "Services status:"

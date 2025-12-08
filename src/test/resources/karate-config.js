@@ -17,16 +17,17 @@ function fn() {
   // Environment-specific configuration
   if (env === 'ci') {
     // CI 환경 (k3d) - Istio Gateway 없이 각 서비스로 직접 port-forward
-    // 각 서비스별 포트: customer-api(8081), store-api(8082), product-api(8083), order-api(8084), payment-api(8085)
+    // 포트 18081-18085 사용 (8081은 schema-registry가 사용하므로 충돌 방지)
+    // 각 서비스별 포트: customer-api(18081), store-api(18082), product-api(18083), order-api(18084), payment-api(18085)
     // baseUrl은 customer-api로 설정 (대부분의 테스트가 auth로 시작)
-    config.baseUrl = 'http://localhost:8081';
+    config.baseUrl = 'http://localhost:18081';
     // 서비스별 baseUrl (feature에서 url을 변경할 때 사용)
     config.baseUrls = {
-      customer: 'http://localhost:8081',
-      store: 'http://localhost:8082',
-      product: 'http://localhost:8083',
-      order: 'http://localhost:8084',
-      payment: 'http://localhost:8085'
+      customer: 'http://localhost:18081',
+      store: 'http://localhost:18082',
+      product: 'http://localhost:18083',
+      order: 'http://localhost:18084',
+      payment: 'http://localhost:18085'
     };
     // CI 환경에서는 시작이 느릴 수 있으므로 재시도 횟수 증가
     config.maxRetries = 20;
