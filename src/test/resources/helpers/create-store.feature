@@ -2,17 +2,19 @@
 Feature: Create Store Helper
 
   Scenario: Create store with owner token
-    * url baseUrls.store
-    * def token = __arg.token
-    * def userId = __arg.userId
+    * def args = __arg || {}
+    * def token = args.token
+    * def userId = args.userId
     * print 'DEBUG: token =', token
     * print 'DEBUG: userId =', userId
-    * def storeName = __arg.name || 'Test Store ' + uuid().substring(0, 8)
-    * def storeDescription = __arg.description || 'Test store description'
+    * print 'DEBUG: userId type =', typeof userId
+    * def storeName = args.name || 'Test Store ' + uuid().substring(0, 8)
+    * def storeDescription = args.description || 'Test store description'
 
-    Given path services.stores
+    Given url baseUrls.store
+    And path services.stores
     And header Authorization = 'Bearer ' + token
-    And header X-User-Id = userId + ''
+    And header X-User-Id = userId
     And request
       """
       {
@@ -21,6 +23,8 @@ Feature: Create Store Helper
       }
       """
     When method POST
+    * print 'DEBUG: response status =', responseStatus
+    * print 'DEBUG: response =', response
     Then status 201
     * def storeId = response.storeId
     * def store = response
