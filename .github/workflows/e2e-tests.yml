@@ -162,30 +162,31 @@ jobs:
         env:
           KUBECONFIG: ${{ steps.k3d-setup.outputs.kubeconfig }}
         run: |
-          # Istio Ingress Gateway로 port-forward (운영과 동일한 방식)
+          # Istio Gateway로 port-forward (운영과 동일한 방식)
           # Gateway가 JWT 검증 후 X-User-Id 헤더를 주입함
-          echo "Setting up port-forward to Istio Ingress Gateway..."
+          echo "Setting up port-forward to Istio Gateway..."
 
-          # Istio Gateway 상태 확인
-          echo "Checking Istio Gateway status..."
+          # Gateway 상태 확인
+          echo "Checking Gateway status..."
           kubectl get gateway -n ecommerce || true
           kubectl get httproute -n ecommerce || true
-          kubectl get svc -n istio-system | grep ingressgateway || true
+          kubectl get svc -n ecommerce | grep gateway || true
 
-          # Istio Ingress Gateway로 port-forward (8080 -> 80)
-          kubectl port-forward svc/istio-ingressgateway 8080:80 -n istio-system &
+          # ecommerce-gateway-istio 서비스로 port-forward (Helm chart가 생성한 Gateway)
+          # 이 서비스가 실제로 HTTPRoute 트래픽을 처리함
+          kubectl port-forward svc/ecommerce-gateway-istio 8080:80 -n ecommerce &
 
           # 포트 준비 대기
           sleep 10
 
           # 포트 포워딩 확인
           echo "Checking port-forward status..."
-          nc -z localhost 8080 && echo "Port 8080 (Istio Gateway) is ready" || echo "Port 8080 is not ready"
+          nc -z localhost 8080 && echo "Port 8080 (Gateway) is ready" || echo "Port 8080 is not ready"
 
           # 서비스 상태 확인
           echo "Services status:"
           kubectl get svc -n ecommerce || true
-          kubectl get pods -n istio-system || true
+          kubectl get pods -n ecommerce | grep gateway || true
 
       - name: Run E2E tests
         env:
