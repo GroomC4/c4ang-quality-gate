@@ -109,17 +109,20 @@ function fn() {
     return new Date().getTime();
   };
 
-  // Test data generators
+  // Test data generators - self-contained functions (no config dependency)
   config.generateCustomerEmail = function() {
-    return 'customer-' + config.uuid().substring(0, 8) + '@test.c4ang.com';
+    var id = java.util.UUID.randomUUID().toString().substring(0, 8);
+    return 'customer-' + id + '@test.c4ang.com';
   };
 
   config.generateOwnerEmail = function() {
-    return 'owner-' + config.uuid().substring(0, 8) + '@test.c4ang.com';
+    var id = java.util.UUID.randomUUID().toString().substring(0, 8);
+    return 'owner-' + id + '@test.c4ang.com';
   };
 
   config.generateUsername = function() {
-    return 'u' + config.uuid().substring(0, 8);
+    var id = java.util.UUID.randomUUID().toString().substring(0, 8);
+    return 'u' + id;
   };
 
   // Default test password
