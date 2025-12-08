@@ -3,9 +3,10 @@ Feature: Create Owner and Login Helper
 
   Scenario: Create owner and get access token
     * url baseUrls.customer
-    * def email = __arg.email || generateOwnerEmail()
-    * def username = __arg.username || generateUsername()
-    * def password = __arg.password || testPassword
+    * def arg = __arg || {}
+    * def email = arg.email || generateOwnerEmail()
+    * def username = arg.username || generateUsername()
+    * def password = arg.password || testPassword
 
     # Signup
     Given path services.ownerSignup
