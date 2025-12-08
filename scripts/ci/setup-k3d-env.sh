@@ -303,13 +303,15 @@ deploy_istio_config() {
     # - namespace.create=false (이미 생성됨)
     # - mTLS 비활성화 (테스트 환경에서 복잡함 방지)
     # - JWT 활성화 (X-User-Id 헤더 주입에 필수!)
+    # - AuthorizationPolicy 비활성화 (게이트웨이 레벨에서 RBAC 비활성화)
+    #   서비스 레벨 AuthorizationPolicy와 충돌 방지
     # - crds.gatewayAPI.install=false (이미 install_istio에서 설치됨)
     # - gatewayAPI.enabled=false (istioctl이 GatewayClass를 이미 생성함, Helm 중복 생성 방지)
     helm_args+=(
         "--set" "namespace.create=false"
         "--set" "security.mTLS.enabled=false"
         "--set" "security.jwt.enabled=true"
-        "--set" "security.authorizationPolicy.enabled=true"
+        "--set" "security.authorizationPolicy.enabled=false"
         "--set" "crds.gatewayAPI.install=false"
         "--set" "gatewayAPI.enabled=false"
     )
@@ -553,7 +555,10 @@ deploy_services() {
         fi
 
         # CI 환경에서는 Redis subchart 비활성화 (ExternalName 서비스 사용)
+        # 서비스 레벨 Istio 리소스 비활성화 (AuthorizationPolicy, RequestAuthentication)
+        # Gateway 레벨에서 처리하므로 서비스 레벨에서 중복 생성 불필요
         helm_args+=("--set" "redis.enabled=false")
+        helm_args+=("--set" "istio.enabled=false")
 
         helm "${helm_args[@]}" || {
             log_warn "${service} 배포 실패, 계속 진행..."
