@@ -10,9 +10,11 @@ Feature: Store Creation
     # Setup: Create owner and login
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
+    * def userId = owner.userId
 
     Given path storePath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
@@ -33,9 +35,11 @@ Feature: Store Creation
     # Setup: Create customer and login
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def token = customer.accessToken
+    * def userId = customer.userId
 
     Given path storePath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
