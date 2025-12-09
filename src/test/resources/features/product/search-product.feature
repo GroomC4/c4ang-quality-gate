@@ -33,6 +33,7 @@ Feature: Product Search
 
     # Search by name
     Given path productPath
+    And header Authorization = 'Bearer ' + token
     And param productName = 'Searchable'
     When method GET
     Then status 200
@@ -67,6 +68,7 @@ Feature: Product Search
 
     # Get by ID
     Given path productPath + '/' + productId
+    And header Authorization = 'Bearer ' + token
     When method GET
     Then status 200
     And match response.id == productId
@@ -103,4 +105,4 @@ Feature: Product Search
     When method GET
     Then status 200
     And match response.products == '#array'
-    And match response.totalElements >= 2
+    And match response.totalElements == '#number? _ >= 2'
