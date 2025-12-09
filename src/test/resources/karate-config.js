@@ -24,6 +24,20 @@ function fn() {
     // K3d 환경에서는 시작이 느릴 수 있으므로 재시도 횟수 증가
     config.maxRetries = 20;
     config.retryInterval = 2000;
+  } else if (env === 'local') {
+    // 로컬 테스트 환경 (k3d) - Istio 없이 개별 서비스에 port-forward로 접근
+    // 각 서비스별로 다른 포트 사용:
+    // customer-api: 8081, order-api: 8082, payment-api: 8083
+    // product-api: 8084, store-api: 8085, saga-tracker-api: 8086
+    config.baseUrl = 'http://localhost:8081'; // default for customer-api
+    config.customerUrl = 'http://localhost:8081';
+    config.orderUrl = 'http://localhost:8082';
+    config.paymentUrl = 'http://localhost:8083';
+    config.productUrl = 'http://localhost:8084';
+    config.storeUrl = 'http://localhost:8085';
+    config.sagaUrl = 'http://localhost:8086';
+    config.maxRetries = 20;
+    config.retryInterval = 2000;
   } else if (env === 'prod') {
     // 프로덕션 환경 (EKS) - Istio Gateway (ALB/NLB)를 통해 접근
     config.baseUrl = karate.properties['base.url'] || 'https://api.ecommerce.com';
@@ -65,14 +79,28 @@ function fn() {
     payments: '/api/v1/payments'
   };
 
-  // 모든 환경에서 baseUrls는 동일 (Gateway를 통해 접근)
-  config.baseUrls = {
-    customer: config.baseUrl,
-    store: config.baseUrl,
-    product: config.baseUrl,
-    order: config.baseUrl,
-    payment: config.baseUrl
-  };
+  // 환경별 baseUrls 설정
+  if (env === 'local') {
+    // local 환경: 각 서비스별 개별 포트로 접근
+    config.baseUrls = {
+      customer: config.customerUrl,
+      store: config.storeUrl,
+      product: config.productUrl,
+      order: config.orderUrl,
+      payment: config.paymentUrl,
+      saga: config.sagaUrl
+    };
+  } else {
+    // dev/prod 환경: Gateway를 통해 동일 URL로 접근
+    config.baseUrls = {
+      customer: config.baseUrl,
+      store: config.baseUrl,
+      product: config.baseUrl,
+      order: config.baseUrl,
+      payment: config.baseUrl,
+      saga: config.baseUrl
+    };
+  }
 
   // Retry configuration for async operations
   karate.configure('retry', { count: config.maxRetries, interval: config.retryInterval });
@@ -110,6 +138,35 @@ function fn() {
 
   // Default test password
   config.testPassword = 'Test1234';
+
+  // JWT payload에서 userId 추출 (local 환경에서 X-User-Id 헤더 생성용)
+  config.parseJwtUserId = function(token) {
+    if (!token) return null;
+    try {
+      var parts = token.split('.');
+      if (parts.length !== 3) return null;
+      var payload = parts[1];
+      // Base64 URL decode
+      var decoded = new java.lang.String(java.util.Base64.getUrlDecoder().decode(payload));
+      var json = JSON.parse(decoded);
+      return json.sub || json.userId || json.user_id || null;
+    } catch (e) {
+      karate.log('JWT parsing failed:', e);
+      return null;
+    }
+  };
+
+  // local 환경에서 인증된 요청에 X-User-Id 헤더를 자동 추가하는 helper
+  // env 변수를 클로저로 캡처
+  var currentEnv = env;
+  config.setAuthHeaders = function(token, userId) {
+    var headers = { 'Authorization': 'Bearer ' + token };
+    // local 환경에서 X-User-Id 헤더 추가 (Istio Gateway 역할 대체)
+    if (currentEnv === 'local' && userId) {
+      headers['X-User-Id'] = String(userId);
+    }
+    return headers;
+  };
 
   return config;
 }

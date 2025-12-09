@@ -67,6 +67,7 @@ Feature: Full Purchase Flow E2E
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "E2E Test Product",
         "price": 15000,
         "stockQuantity": 100,

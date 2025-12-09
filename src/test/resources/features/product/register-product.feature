@@ -16,10 +16,12 @@ Feature: Product Registration
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Test Product",
         "price": 10000,
         "stockQuantity": 100,
@@ -40,14 +42,17 @@ Feature: Product Registration
   Scenario: [P1-PROD-05] Register product with non-existent store fails
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
+    * def userId = owner.userId
     * def fakeStoreId = uuid()
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
         "storeId": "#(fakeStoreId)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Orphan Product",
         "price": 5000,
         "stockQuantity": 50
@@ -60,16 +65,19 @@ Feature: Product Registration
   Scenario: Customer cannot register product (403)
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def token = customer.accessToken
+    * def userId = customer.userId
 
     # Need a valid storeId for request (will fail on auth before store validation)
     * def fakeStoreId = uuid()
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
         "storeId": "#(fakeStoreId)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Customer Product",
         "price": 5000,
         "stockQuantity": 50

@@ -10,9 +10,11 @@ Feature: Store Retrieval
     # Setup: Create owner and store
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
+    * def userId = owner.userId
 
     Given path storePath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
@@ -27,6 +29,7 @@ Feature: Store Retrieval
     # Get store
     Given path storePath + '/' + storeId
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     When method GET
     Then status 200
     And match response.storeId == storeId
@@ -38,9 +41,11 @@ Feature: Store Retrieval
     # Setup: Create owner and store
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
+    * def userId = owner.userId
 
     Given path storePath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
@@ -55,6 +60,7 @@ Feature: Store Retrieval
     # Get my store
     Given path storePath + '/mine'
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     When method GET
     Then status 200
     And match response.storeId == storeId
@@ -64,9 +70,11 @@ Feature: Store Retrieval
   Scenario: [P1-STORE-05] Get non-existent store returns 404
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
     * def token = owner.accessToken
+    * def userId = owner.userId
     * def fakeStoreId = uuid()
 
     Given path storePath + '/' + fakeStoreId
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     When method GET
     Then status 404

@@ -5,6 +5,7 @@ Feature: Create Product Helper
     * def args = __arg || {}
     * def token = args.token
     * def storeId = args.storeId
+    * def categoryId = args.categoryId || '123e4567-e89b-12d3-a456-426614174001'
     * def productName = args.name || 'Test Product ' + uuid().substring(0, 8)
     * def price = args.price || 10000
     * def stockQuantity = args.stockQuantity || 100
@@ -16,6 +17,7 @@ Feature: Create Product Helper
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "#(categoryId)",
         "name": "#(productName)",
         "price": #(price),
         "stockQuantity": #(stockQuantity),

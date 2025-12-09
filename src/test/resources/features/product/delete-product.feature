@@ -16,10 +16,12 @@ Feature: Product Deletion
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Product to Delete",
         "price": 10000,
         "stockQuantity": 50
@@ -32,6 +34,7 @@ Feature: Product Deletion
     # Delete product
     Given path productPath + '/' + productId
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request { "storeId": "#(storeId)" }
     When method PATCH
     Then status 200
@@ -49,10 +52,12 @@ Feature: Product Deletion
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Product to Hide",
         "price": 10000,
         "stockQuantity": 50
@@ -65,6 +70,7 @@ Feature: Product Deletion
     # Hide product
     Given path productPath + '/' + productId + '/hide'
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request { "storeId": "#(storeId)" }
     When method PATCH
     Then status 200

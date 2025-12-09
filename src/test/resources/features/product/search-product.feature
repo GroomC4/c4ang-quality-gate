@@ -21,6 +21,7 @@ Feature: Product Search
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Searchable Product ABC",
         "price": 15000,
         "stockQuantity": 50
@@ -53,6 +54,7 @@ Feature: Product Search
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Specific Product",
         "price": 20000,
         "stockQuantity": 30,
@@ -84,13 +86,13 @@ Feature: Product Search
     # Create multiple products
     Given path productPath
     And header Authorization = 'Bearer ' + token
-    And request { "storeId": "#(storeId)", "name": "Product 1", "price": 10000, "stockQuantity": 10 }
+    And request { "storeId": "#(storeId)", "categoryId": "123e4567-e89b-12d3-a456-426614174001", "name": "Product 1", "price": 10000, "stockQuantity": 10 }
     When method POST
     Then status 201
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
-    And request { "storeId": "#(storeId)", "name": "Product 2", "price": 20000, "stockQuantity": 20 }
+    And request { "storeId": "#(storeId)", "categoryId": "123e4567-e89b-12d3-a456-426614174001", "name": "Product 2", "price": 20000, "stockQuantity": 20 }
     When method POST
     Then status 201
 

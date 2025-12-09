@@ -16,10 +16,12 @@ Feature: Product Update
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Original Product",
         "price": 10000,
         "stockQuantity": 100
@@ -32,10 +34,12 @@ Feature: Product Update
     # Update product
     Given path productPath + '/' + productId
     And header Authorization = 'Bearer ' + token
+    And header X-User-Id = userId
     And request
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Updated Product",
         "price": 15000,
         "stockQuantity": 150,
@@ -61,10 +65,12 @@ Feature: Product Update
 
     Given path productPath
     And header Authorization = 'Bearer ' + token1
+    And header X-User-Id = userId1
     And request
       """
       {
         "storeId": "#(storeId1)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Owner1 Product",
         "price": 10000,
         "stockQuantity": 50
@@ -82,10 +88,12 @@ Feature: Product Update
     # Try to update with different owner
     Given path productPath + '/' + productId
     And header Authorization = 'Bearer ' + token2
+    And header X-User-Id = userId2
     And request
       """
       {
         "storeId": "#(storeId1)",
+        "categoryId": "123e4567-e89b-12d3-a456-426614174001",
         "name": "Hijacked Product",
         "price": 99999,
         "stockQuantity": 1
