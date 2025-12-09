@@ -75,7 +75,7 @@ Feature: Payment Request
     And match response.status == '#string'
 
   @error-case
-  Scenario: Payment request without authentication fails
+  Scenario: Payment request without authentication fails (403)
     Given path paymentPath + '/request'
     And request
       """
@@ -89,4 +89,4 @@ Feature: Payment Request
       }
       """
     When method POST
-    Then status 401
+    Then status 403

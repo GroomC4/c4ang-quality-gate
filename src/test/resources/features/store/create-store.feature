@@ -51,7 +51,7 @@ Feature: Store Creation
     Then status 403
 
   @error-case
-  Scenario: Store creation without authentication fails (401)
+  Scenario: Store creation without authentication fails (403)
     Given path storePath
     And request
       """
@@ -61,4 +61,4 @@ Feature: Store Creation
       }
       """
     When method POST
-    Then status 401
+    Then status 403

@@ -97,7 +97,7 @@ Feature: Order Creation
     And match response.status == 'ORDER_CONFIRMED'
 
   @error-case
-  Scenario: Order creation without authentication fails
+  Scenario: Order creation without authentication fails (403)
     Given path orderPath
     And request
       """
@@ -115,4 +115,4 @@ Feature: Order Creation
       }
       """
     When method POST
-    Then status 401
+    Then status 403
