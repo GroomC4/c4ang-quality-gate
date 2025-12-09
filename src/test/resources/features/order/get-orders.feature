@@ -19,9 +19,11 @@ Feature: Order Query
     # Create customer and order
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def customerToken = customer.accessToken
+    * def customerId = customer.userId
 
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -44,6 +46,7 @@ Feature: Order Query
     # Get order by ID
     Given path orderPath + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     When method GET
     Then status 200
     And match response.orderId == orderId
@@ -64,10 +67,12 @@ Feature: Order Query
     # Create customer
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def customerToken = customer.accessToken
+    * def customerId = customer.userId
 
     # Create multiple orders
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -81,6 +86,7 @@ Feature: Order Query
 
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -95,18 +101,21 @@ Feature: Order Query
     # List orders
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     When method GET
     Then status 200
     And match response.orders == '#array'
-    And match response.orders.length >= 2
+    And match response.orders == '#[_ >= 2]'
 
   @error-case
   Scenario: Get non-existent order returns 404
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def customerToken = customer.accessToken
+    * def customerId = customer.userId
     * def fakeOrderId = uuid()
 
     Given path orderPath + '/' + fakeOrderId
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     When method GET
     Then status 404

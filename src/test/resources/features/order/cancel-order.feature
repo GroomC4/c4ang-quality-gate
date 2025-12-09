@@ -19,10 +19,12 @@ Feature: Order Cancellation
     # Setup: Create customer
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def customerToken = customer.accessToken
+    * def customerId = customer.userId
 
     # Create order
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -45,6 +47,7 @@ Feature: Order Cancellation
     # Wait for order to be confirmed first
     Given path orderPath + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200
@@ -52,6 +55,7 @@ Feature: Order Cancellation
     # Cancel order
     Given path orderPath + '/' + orderId + '/cancel'
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -78,9 +82,11 @@ Feature: Order Cancellation
     # Create order with customer1
     * def customer1 = call read('classpath:helpers/create-customer-and-login.feature')
     * def token1 = customer1.accessToken
+    * def userId1 = customer1.userId
 
     Given path orderPath
     And header Authorization = 'Bearer ' + token1
+    And header X-User-Id = userId1
     And request
       """
       {
@@ -103,9 +109,11 @@ Feature: Order Cancellation
     # Try to cancel with customer2
     * def customer2 = call read('classpath:helpers/create-customer-and-login.feature')
     * def token2 = customer2.accessToken
+    * def userId2 = customer2.userId
 
     Given path orderPath + '/' + orderId + '/cancel'
     And header Authorization = 'Bearer ' + token2
+    And header X-User-Id = userId2
     And request { "cancelReason": "Hijack attempt" }
     When method PATCH
     Then status 403

@@ -19,8 +19,8 @@ function fn() {
     // 개발/CI 환경 (k3d) - Istio Gateway를 통해 접근 (운영과 동일)
     // port-forward로 istio-ingressgateway에 연결 (localhost:8080 -> istio-ingressgateway:80)
     config.baseUrl = 'http://localhost:8080';
-    // Istio Gateway 라우팅을 위한 Host 헤더 (Gateway hostname과 일치해야 함)
-    config.gatewayHost = 'api.ecommerce.com';
+    // Gateway에 http-localhost 리스너가 있으므로 Host 헤더 불필요
+    // api.ecommerce.com Host 헤더 사용 시 HTTPS 리다이렉트 발생하여 제거
     // K3d 환경에서는 시작이 느릴 수 있으므로 재시도 횟수 증가
     config.maxRetries = 20;
     config.retryInterval = 2000;

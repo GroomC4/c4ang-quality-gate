@@ -8,13 +8,14 @@ Feature: Wait for Order Status Helper
     * def maxWait = __arg.maxWait || 15000
     * def interval = __arg.interval || 1000
     * def token = __arg.token
+    * def userId = __arg.userId
 
     * def pollStatus =
       """
       function() {
         var maxRetries = Math.floor(maxWait / interval);
         for (var i = 0; i < maxRetries; i++) {
-          var config = { orderId: orderId, token: token };
+          var config = { orderId: orderId, token: token, userId: userId };
           var res = karate.call('classpath:helpers/get-order.feature', config);
           karate.log('Attempt', i + 1, '- Order Status:', res.order.status);
 

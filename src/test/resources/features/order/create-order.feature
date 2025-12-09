@@ -19,11 +19,13 @@ Feature: Order Creation
     # Setup: Create customer
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def customerToken = customer.accessToken
+    * def customerId = customer.userId
 
     # Create order
     * def idempotencyKey = uuid()
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -65,10 +67,12 @@ Feature: Order Creation
     # Setup: Create customer
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def customerToken = customer.accessToken
+    * def customerId = customer.userId
 
     # Create order
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -91,6 +95,7 @@ Feature: Order Creation
     # Wait for order confirmation (async SAGA)
     Given path orderPath + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200
