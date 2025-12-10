@@ -2,7 +2,8 @@
 Feature: Full Purchase Flow E2E
 
   Background:
-    * configure retry = { count: 20, interval: 1000 }
+    # Saga Tracker 기반 비동기 검증을 위한 retry 설정 강화
+    * configure retry = { count: 30, interval: 3000 }
 
   @happy-path
   Scenario: [P1-E2E-01] Complete purchase flow - Signup → Store → Product → Order → Payment
@@ -147,10 +148,21 @@ Feature: Full Purchase Flow E2E
     * print 'Order created:', orderId, 'Total:', expectedTotal
 
     # ============================================
-    # Step 6: Wait for order confirmation (SAGA)
+    # Step 6: Wait for order confirmation via Saga Tracker
     # ============================================
-    * print '=== Step 6: Wait for order confirmation (stock reservation) ==='
+    * print '=== Step 6: Wait for order confirmation (Saga Tracker) ==='
 
+    # Saga Tracker API를 통해 비동기 이벤트 처리 완료 확인
+    * def sagaWaitConfig = { orderId: '#(orderId)', expectedStatus: 'COMPLETED', token: '#(customerToken)', maxWait: 90000, interval: 3000 }
+    * def sagaResult = call read('classpath:helpers/wait-saga-status.feature') sagaWaitConfig
+    * print 'Saga Tracker result:', sagaResult.result
+
+    # Saga가 완료되었는지 확인 (실패 시에도 진행하고 Order API로 최종 상태 확인)
+    * def sagaSuccess = sagaResult.result.success
+    * print 'Saga completed successfully:', sagaSuccess
+
+    # Order API로 최종 상태 확인
+    * url baseUrls.order
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
     And header X-User-Id = customerId

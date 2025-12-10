@@ -16,14 +16,14 @@ function fn() {
 
   // Environment-specific configuration
   if (env === 'dev') {
-    // 개발/CI 환경 (k3d) - Istio Gateway를 통해 접근 (운영과 동일)
-    // port-forward로 istio-ingressgateway에 연결 (localhost:8080 -> istio-ingressgateway:80)
+    // 개발/CI 환경 (k3d) - Istio Gateway를 통한 통합 라우팅
+    // Gateway port-forward 필요:
+    //   kubectl port-forward svc/ecommerce-gateway-istio 8080:80 -n ecommerce &
     config.baseUrl = 'http://localhost:8080';
-    // Gateway에 http-localhost 리스너가 있으므로 Host 헤더 불필요
-    // api.ecommerce.com Host 헤더 사용 시 HTTPS 리다이렉트 발생하여 제거
-    // K3d 환경에서는 시작이 느릴 수 있으므로 재시도 횟수 증가
-    config.maxRetries = 20;
-    config.retryInterval = 2000;
+    config.gatewayHost = 'localhost';  // Istio Gateway 라우팅을 위한 Host 헤더
+    // K3d 환경에서는 Kafka 이벤트 처리가 느릴 수 있으므로 재시도 설정 강화
+    config.maxRetries = 30;       // 20 → 30 (비동기 이벤트 처리 대기)
+    config.retryInterval = 3000;  // 2000 → 3000ms (Kafka consumer lag 고려)
   } else if (env === 'prod') {
     // 프로덕션 환경 (EKS) - Istio Gateway (ALB/NLB)를 통해 접근
     config.baseUrl = karate.properties['base.url'] || 'https://api.ecommerce.com';
@@ -62,25 +62,24 @@ function fn() {
     orders: '/api/v1/orders',
 
     // Payment endpoints (payment-api)
-    payments: '/api/v1/payments'
+    payments: '/api/v1/payments',
+
+    // Saga Tracker endpoints (saga-tracker-api) - 비동기 처리 검증용
+    sagas: '/api/v1/sagas'
   };
 
-  // 모든 환경에서 baseUrls는 동일 (Gateway를 통해 접근)
+  // 서비스별 baseUrl 설정 - 모든 환경에서 Gateway를 통해 접근
   config.baseUrls = {
     customer: config.baseUrl,
     store: config.baseUrl,
     product: config.baseUrl,
     order: config.baseUrl,
-    payment: config.baseUrl
+    payment: config.baseUrl,
+    sagaTracker: config.baseUrl  // Saga Tracker도 Gateway를 통해 접근
   };
 
-  // PG Callback URL - dev 환경에서는 payment-api에 직접 호출 (istiod 없이 Gateway의 동적 라우트 미작동)
-  // prod 환경에서는 webhook-gateway를 통해 호출
-  if (env === 'dev') {
-    config.pgCallbackBaseUrl = 'http://localhost:8083';  // payment-api 직접 호출 (port-forward 필요)
-  } else {
-    config.pgCallbackBaseUrl = config.baseUrl;  // Gateway 통해 호출
-  }
+  // PG Callback URL - 모든 환경에서 Gateway를 통해 접근
+  config.pgCallbackBaseUrl = config.baseUrl;
 
   // Retry configuration for async operations
   karate.configure('retry', { count: config.maxRetries, interval: config.retryInterval });

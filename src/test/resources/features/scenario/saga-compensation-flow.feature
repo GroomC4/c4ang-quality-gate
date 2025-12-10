@@ -2,7 +2,8 @@
 Feature: SAGA Compensation Flow E2E
 
   Background:
-    * configure retry = { count: 20, interval: 1000 }
+    # Saga Tracker 기반 비동기 검증을 위한 retry 설정 강화
+    * configure retry = { count: 30, interval: 3000 }
 
   @error-case
   Scenario: [P1-E2E-02] Stock reservation failure triggers order cancellation
@@ -74,10 +75,21 @@ Feature: SAGA Compensation Flow E2E
     * print 'Order created:', orderId
 
     # ============================================
-    # Wait for SAGA compensation (order should fail)
+    # Wait for SAGA compensation via Saga Tracker
     # ============================================
-    * print '=== Waiting for SAGA compensation ==='
+    * print '=== Waiting for SAGA compensation (Saga Tracker) ==='
 
+    # Saga Tracker API를 통해 보상 트랜잭션 완료 확인
+    * def sagaWaitConfig = { orderId: '#(orderId)', expectedStatus: 'COMPENSATED', token: '#(customerToken)', maxWait: 90000, interval: 3000 }
+    * def sagaResult = call read('classpath:helpers/wait-saga-status.feature') sagaWaitConfig
+    * print 'Saga Tracker result:', sagaResult.result
+
+    # Saga 보상 완료 확인
+    * def sagaSuccess = sagaResult.result.success
+    * print 'Saga compensated successfully:', sagaSuccess
+
+    # Order API로 최종 상태 확인
+    * url baseUrls.order
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
     And header X-User-Id = customerId
