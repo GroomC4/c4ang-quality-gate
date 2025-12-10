@@ -54,24 +54,38 @@ Feature: Payment Request
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200
+    * print 'Order response:', response
     And assert response.status == 'ORDER_CONFIRMED'
 
-    # Request payment - switch back to payment service
+    # Wait for payment-service to create payment via Kafka event
+    # Payment-service listens to OrderConfirmed and creates Payment (PAYMENT_WAIT)
+    # Use retry to wait for Kafka event propagation
+    * def sleep = function(ms){ java.lang.Thread.sleep(ms) }
+    * def findPaymentByOrderId = function(payments, targetOrderId) { for (var i = 0; i < payments.length; i++) { if (payments[i].orderId == targetOrderId) return payments[i].paymentId; } return null; }
+
+    # Retry loop to get payment - Kafka event may take time
     * url baseUrls.payment
-    * def paymentId = uuid()
+    Given path paymentPath
+    And param userId = customerId
+    And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
+    # Retry until payments list is not empty (wait up to 20 seconds)
+    And retry until response.payments.length > 0
+    When method GET
+    Then status 200
+    * print 'Payments list response:', response
+    * def paymentId = findPaymentByOrderId(response.payments, orderId)
+    * print 'Found paymentId:', paymentId, 'for orderId:', orderId
+    * assert paymentId != null
+
+    # Request payment
+    * def totalAmountNum = parseInt(totalAmount)
+    * print 'Payment request - paymentId:', paymentId, 'totalAmount:', totalAmountNum
     Given path paymentPath + '/request'
     And header Authorization = 'Bearer ' + customerToken
-    And request
-      """
-      {
-        "paymentId": "#(paymentId)",
-        "paymentMethod": "CARD",
-        "totalAmount": #(totalAmount),
-        "paymentAmount": #(totalAmount),
-        "discountAmount": 0,
-        "deliveryFee": 0
-      }
-      """
+    And header X-User-Id = customerId
+    * def paymentRequest = { paymentId: '#(paymentId)', paymentMethod: 'CARD', totalAmount: '#(totalAmountNum)', paymentAmount: '#(totalAmountNum)', discountAmount: 0, deliveryFee: 0 }
+    And request paymentRequest
     When method POST
     Then status 201
     And match response.paymentId == paymentId
