@@ -21,6 +21,7 @@ Feature: Product Search
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Searchable Product ABC",
         "price": 15000,
         "stockQuantity": 50
@@ -32,6 +33,7 @@ Feature: Product Search
 
     # Search by name
     Given path productPath
+    And header Authorization = 'Bearer ' + token
     And param productName = 'Searchable'
     When method GET
     Then status 200
@@ -53,6 +55,7 @@ Feature: Product Search
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Specific Product",
         "price": 20000,
         "stockQuantity": 30,
@@ -65,6 +68,7 @@ Feature: Product Search
 
     # Get by ID
     Given path productPath + '/' + productId
+    And header Authorization = 'Bearer ' + token
     When method GET
     Then status 200
     And match response.id == productId
@@ -84,13 +88,13 @@ Feature: Product Search
     # Create multiple products
     Given path productPath
     And header Authorization = 'Bearer ' + token
-    And request { "storeId": "#(storeId)", "name": "Product 1", "price": 10000, "stockQuantity": 10 }
+    And request { "storeId": "#(storeId)", "categoryId": "00000000-0000-0000-0000-000000000001", "name": "Product 1", "price": 10000, "stockQuantity": 10 }
     When method POST
     Then status 201
 
     Given path productPath
     And header Authorization = 'Bearer ' + token
-    And request { "storeId": "#(storeId)", "name": "Product 2", "price": 20000, "stockQuantity": 20 }
+    And request { "storeId": "#(storeId)", "categoryId": "00000000-0000-0000-0000-000000000001", "name": "Product 2", "price": 20000, "stockQuantity": 20 }
     When method POST
     Then status 201
 
@@ -101,4 +105,4 @@ Feature: Product Search
     When method GET
     Then status 200
     And match response.products == '#array'
-    And match response.totalElements >= 2
+    And assert response.totalElements >= 2

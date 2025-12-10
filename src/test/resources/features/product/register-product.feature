@@ -20,6 +20,7 @@ Feature: Product Registration
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Test Product",
         "price": 10000,
         "stockQuantity": 100,
@@ -48,6 +49,7 @@ Feature: Product Registration
       """
       {
         "storeId": "#(fakeStoreId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Orphan Product",
         "price": 5000,
         "stockQuantity": 50
@@ -70,6 +72,7 @@ Feature: Product Registration
       """
       {
         "storeId": "#(fakeStoreId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Customer Product",
         "price": 5000,
         "stockQuantity": 50

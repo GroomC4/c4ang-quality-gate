@@ -19,7 +19,7 @@ Feature: Create Product Helper
       """
       {
         "storeId": "#(storeId)",
-        "categoryId": #(categoryId),
+        "categoryId": "#(categoryId)",
         "name": "#(productName)",
         "price": #(price),
         "stockQuantity": #(stockQuantity),

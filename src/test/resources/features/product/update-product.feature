@@ -20,6 +20,7 @@ Feature: Product Update
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Original Product",
         "price": 10000,
         "stockQuantity": 100
@@ -36,6 +37,7 @@ Feature: Product Update
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Updated Product",
         "price": 15000,
         "stockQuantity": 150,
@@ -65,6 +67,7 @@ Feature: Product Update
       """
       {
         "storeId": "#(storeId1)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Owner1 Product",
         "price": 10000,
         "stockQuantity": 50
@@ -86,6 +89,7 @@ Feature: Product Update
       """
       {
         "storeId": "#(storeId1)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Hijacked Product",
         "price": 99999,
         "stockQuantity": 1

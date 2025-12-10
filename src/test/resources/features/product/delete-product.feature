@@ -20,6 +20,7 @@ Feature: Product Deletion
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Product to Delete",
         "price": 10000,
         "stockQuantity": 50
@@ -53,6 +54,7 @@ Feature: Product Deletion
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Product to Hide",
         "price": 10000,
         "stockQuantity": 50
