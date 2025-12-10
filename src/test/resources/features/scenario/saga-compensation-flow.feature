@@ -20,10 +20,12 @@ Feature: SAGA Compensation Flow E2E
     * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
+    And header X-User-Id = ownerId
     And request
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Limited Stock Product",
         "price": 10000,
         "stockQuantity": 5,
@@ -40,6 +42,7 @@ Feature: SAGA Compensation Flow E2E
     # ============================================
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def customerToken = customer.accessToken
+    * def customerId = customer.userId
 
     # ============================================
     # Try to order more than available stock
@@ -49,6 +52,7 @@ Feature: SAGA Compensation Flow E2E
     * url baseUrls.order
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -76,6 +80,7 @@ Feature: SAGA Compensation Flow E2E
 
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_FAILED' || response.status == 'ORDER_CONFIRMED'
     When method GET
     Then status 200
@@ -100,10 +105,12 @@ Feature: SAGA Compensation Flow E2E
     * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
+    And header X-User-Id = ownerId
     And request
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "Cancellation Test Product",
         "price": 10000,
         "stockQuantity": 50
@@ -118,10 +125,12 @@ Feature: SAGA Compensation Flow E2E
     # ============================================
     * def customer = call read('classpath:helpers/create-customer-and-login.feature')
     * def customerToken = customer.accessToken
+    * def customerId = customer.userId
 
     * url baseUrls.order
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -146,6 +155,7 @@ Feature: SAGA Compensation Flow E2E
     # ============================================
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200
@@ -159,6 +169,7 @@ Feature: SAGA Compensation Flow E2E
 
     Given path services.orders + '/' + orderId + '/cancel'
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request { "cancelReason": "E2E test - stock restoration check" }
     When method PATCH
     Then status 200
@@ -172,6 +183,7 @@ Feature: SAGA Compensation Flow E2E
 
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -194,6 +206,7 @@ Feature: SAGA Compensation Flow E2E
     # This order should also be confirmed (stock was restored)
     Given path services.orders + '/' + newOrderId
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200

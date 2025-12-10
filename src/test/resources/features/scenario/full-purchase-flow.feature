@@ -43,6 +43,7 @@ Feature: Full Purchase Flow E2E
     * url baseUrls.store
     Given path services.stores
     And header Authorization = 'Bearer ' + ownerToken
+    And header X-User-Id = ownerId
     And request
       """
       {
@@ -63,10 +64,12 @@ Feature: Full Purchase Flow E2E
     * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
+    And header X-User-Id = ownerId
     And request
       """
       {
         "storeId": "#(storeId)",
+        "categoryId": "00000000-0000-0000-0000-000000000001",
         "name": "E2E Test Product",
         "price": 15000,
         "stockQuantity": 100,
@@ -119,6 +122,7 @@ Feature: Full Purchase Flow E2E
     * url baseUrls.order
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And request
       """
       {
@@ -149,6 +153,7 @@ Feature: Full Purchase Flow E2E
 
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200
@@ -156,28 +161,53 @@ Feature: Full Purchase Flow E2E
     * print 'Order confirmed:', response.status
 
     # ============================================
-    # Step 7: Request payment
+    # Step 7: Get payment created by Kafka event and request payment
     # ============================================
-    * print '=== Step 7: Request payment ==='
-    * def paymentId = uuid()
+    * print '=== Step 7: Get payment and request payment ==='
+
+    # Wait for payment to be created via Kafka event (OrderConfirmed -> Payment PAYMENT_WAIT)
+    * def findPaymentByOrderId = function(payments, targetOrderId) { for (var i = 0; i < payments.length; i++) { if (payments[i].orderId == targetOrderId) return payments[i].paymentId; } return null; }
 
     * url baseUrls.payment
+    Given path services.payments
+    And param userId = customerId
+    And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
+    And retry until response.payments.length > 0
+    When method GET
+    Then status 200
+    * def paymentId = findPaymentByOrderId(response.payments, orderId)
+    * print 'Found paymentId:', paymentId, 'for orderId:', orderId
+    * assert paymentId != null
+
+    # Request payment
     Given path services.payments + '/request'
     And header Authorization = 'Bearer ' + customerToken
-    And request
-      """
-      {
-        "paymentId": "#(paymentId)",
-        "paymentMethod": "CARD",
-        "totalAmount": #(expectedTotal),
-        "paymentAmount": #(expectedTotal),
-        "discountAmount": 0,
-        "deliveryFee": 0
-      }
-      """
+    And header X-User-Id = customerId
+    * def paymentRequest = { paymentId: '#(paymentId)', paymentMethod: 'CARD', totalAmount: '#(expectedTotal)', paymentAmount: '#(expectedTotal)', discountAmount: 0, deliveryFee: 0 }
+    And request paymentRequest
     When method POST
     Then status 201
     * print 'Payment requested:', paymentId
+
+    # ============================================
+    # Step 7.5: Simulate PG callback to complete payment
+    # ============================================
+    * print '=== Step 7.5: Simulate PG callback ==='
+
+    # PG callback to complete payment (simulates PG approval)
+    # dev 환경에서는 payment-api 직접 호출 (istiod 없이 Gateway의 동적 라우트가 작동하지 않음)
+    * def uuid1 = java.util.UUID.randomUUID().toString().substring(0, 8)
+    * def uuid2 = java.util.UUID.randomUUID().toString().substring(0, 8)
+    * def pgApprovalNumber = 'TEST-APPROVAL-' + uuid1
+    * def idempotencyKey = 'TEST-IDEMPOTENCY-' + uuid2
+    * url pgCallbackBaseUrl
+    Given path '/external/pg/callback/payment/complete'
+    * def pgCallbackRequest = { paymentId: '#(paymentId)', pgApprovalNumber: '#(pgApprovalNumber)', idempotencyKey: '#(idempotencyKey)' }
+    And request pgCallbackRequest
+    When method POST
+    Then status 200
+    * print 'PG callback completed for paymentId:', paymentId
 
     # ============================================
     # Step 8: Verify final order status
@@ -187,6 +217,7 @@ Feature: Full Purchase Flow E2E
     * url baseUrls.order
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
+    And header X-User-Id = customerId
     And retry until response.status == 'PAYMENT_COMPLETED' || response.status == 'PAYMENT_PENDING' || response.status == 'PAYMENT_FAILED'
     When method GET
     Then status 200

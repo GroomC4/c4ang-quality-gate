@@ -74,6 +74,14 @@ function fn() {
     payment: config.baseUrl
   };
 
+  // PG Callback URL - dev 환경에서는 payment-api에 직접 호출 (istiod 없이 Gateway의 동적 라우트 미작동)
+  // prod 환경에서는 webhook-gateway를 통해 호출
+  if (env === 'dev') {
+    config.pgCallbackBaseUrl = 'http://localhost:8083';  // payment-api 직접 호출 (port-forward 필요)
+  } else {
+    config.pgCallbackBaseUrl = config.baseUrl;  // Gateway 통해 호출
+  }
+
   // Retry configuration for async operations
   karate.configure('retry', { count: config.maxRetries, interval: config.retryInterval });
   karate.configure('connectTimeout', config.apiTimeout);
