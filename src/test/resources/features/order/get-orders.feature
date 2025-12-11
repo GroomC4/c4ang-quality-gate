@@ -23,7 +23,6 @@ Feature: Order Query
 
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request
       """
       {
@@ -46,7 +45,6 @@ Feature: Order Query
     # Get order by ID
     Given path orderPath + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     When method GET
     Then status 200
     And match response.orderId == orderId
@@ -72,7 +70,6 @@ Feature: Order Query
     # Create multiple orders
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request
       """
       {
@@ -86,7 +83,6 @@ Feature: Order Query
 
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request
       """
       {
@@ -101,7 +97,6 @@ Feature: Order Query
     # List orders
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     When method GET
     Then status 200
     And match response.orders == '#array'
@@ -116,6 +111,5 @@ Feature: Order Query
 
     Given path orderPath + '/' + fakeOrderId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     When method GET
     Then status 404

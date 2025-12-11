@@ -12,21 +12,28 @@ Feature: Wait for Saga Status Helper
 
     * def pollSagaStatus =
       """
-      function() {
-        var maxRetries = Math.floor(maxWait / interval);
+      function(args) {
+        var pollInterval = args.interval;
+        var pollMaxWait = args.maxWait;
+        var pollOrderId = args.orderId;
+        var pollExpectedStatus = args.expectedStatus;
+        var pollToken = args.token;
+        var pollBaseUrl = args.baseUrl;
+
+        var maxRetries = Math.floor(pollMaxWait / pollInterval);
         var sagaResult = null;
 
         for (var i = 0; i < maxRetries; i++) {
-          karate.log('Saga Tracker polling attempt', i + 1, '/', maxRetries, 'for orderId:', orderId);
+          karate.log('Saga Tracker polling attempt', i + 1, '/', maxRetries, 'for orderId:', pollOrderId);
 
           // Saga Tracker API 호출 - orderId로 saga 조회
-          var http = karate.http(baseUrl);
+          var http = karate.http(pollBaseUrl);
           http.path('/api/v1/sagas');
-          http.param('orderId', orderId);
+          http.param('orderId', pollOrderId);
           http.header('Content-Type', 'application/json');
           http.header('Accept', 'application/json');
-          if (token) {
-            http.header('Authorization', 'Bearer ' + token);
+          if (pollToken) {
+            http.header('Authorization', 'Bearer ' + pollToken);
           }
 
           var response = http.get();
@@ -41,47 +48,47 @@ Feature: Wait for Saga Status Helper
             var sagas = body.content || body;
             if (sagas && sagas.length > 0) {
               sagaResult = sagas[0];
-              karate.log('Found saga:', sagaResult.sagaId, 'status:', sagaResult.status);
+              karate.log('Found saga:', sagaResult.sagaId, 'status:', sagaResult.currentStatus);
 
-              if (sagaResult.status == expectedStatus) {
+              if (sagaResult.currentStatus == pollExpectedStatus) {
                 return {
                   success: true,
                   saga: sagaResult,
                   attempts: i + 1,
-                  message: 'Saga reached expected status: ' + expectedStatus
+                  message: 'Saga reached expected status: ' + pollExpectedStatus
                 };
               }
 
               // 실패/보상 완료 상태 체크
-              if (expectedStatus != 'COMPENSATED' && expectedStatus != 'FAILED') {
-                if (sagaResult.status == 'COMPENSATED' || sagaResult.status == 'FAILED') {
+              if (pollExpectedStatus != 'COMPENSATED' && pollExpectedStatus != 'FAILED') {
+                if (sagaResult.currentStatus == 'COMPENSATED' || sagaResult.currentStatus == 'FAILED') {
                   return {
                     success: false,
-                    reason: sagaResult.status,
+                    reason: sagaResult.currentStatus,
                     saga: sagaResult,
-                    message: 'Saga ended in unexpected status: ' + sagaResult.status
+                    message: 'Saga ended in unexpected status: ' + sagaResult.currentStatus
                   };
                 }
               }
             } else {
-              karate.log('No saga found yet for orderId:', orderId);
+              karate.log('No saga found yet for orderId:', pollOrderId);
             }
           } else if (response.status == 404) {
-            karate.log('Saga not found yet for orderId:', orderId);
+            karate.log('Saga not found yet for orderId:', pollOrderId);
           } else {
             karate.log('Saga Tracker API error:', response.status, response.body);
           }
 
-          karate.pause(interval);
+          karate.pause(pollInterval);
         }
 
         return {
           success: false,
           reason: 'TIMEOUT',
           saga: sagaResult,
-          message: 'Timeout waiting for saga status: ' + expectedStatus + ' (waited ' + maxWait + 'ms)'
+          message: 'Timeout waiting for saga status: ' + pollExpectedStatus + ' (waited ' + pollMaxWait + 'ms)'
         };
       }
       """
 
-    * def result = pollSagaStatus()
+    * def result = pollSagaStatus({ orderId: orderId, expectedStatus: expectedStatus, token: token, baseUrl: baseUrl, interval: interval, maxWait: maxWait })

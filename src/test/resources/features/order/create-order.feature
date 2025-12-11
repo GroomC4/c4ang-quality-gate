@@ -1,4 +1,4 @@
-@order @saga
+@order
 Feature: Order Creation
 
   Background:
@@ -25,7 +25,6 @@ Feature: Order Creation
     * def idempotencyKey = uuid()
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request
       """
       {
@@ -53,7 +52,7 @@ Feature: Order Creation
     And match response.items[0].quantity == 2
     And match response.createdAt == '#notnull'
 
-  @happy-path @async
+  @happy-path @async @saga
   Scenario: [P1-ORDER-02] Order confirmed after stock reservation
     # Setup: Create owner with store and product
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
@@ -72,7 +71,6 @@ Feature: Order Creation
     # Create order
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request
       """
       {
@@ -95,7 +93,6 @@ Feature: Order Creation
     # Wait for order confirmation (async SAGA)
     Given path orderPath + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200
@@ -120,5 +117,5 @@ Feature: Order Creation
       }
       """
     When method POST
-    # 인증 없이 요청 시 400(Bad Request) 또는 401(Unauthorized) 모두 허용
-    Then assert responseStatus == 400 || responseStatus == 401
+    # 인증 없이 요청 시 400/401/403 모두 허용 (서비스 또는 Gateway AuthorizationPolicy)
+    Then assert responseStatus == 400 || responseStatus == 401 || responseStatus == 403

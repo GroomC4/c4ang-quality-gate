@@ -21,7 +21,6 @@ Feature: SAGA Compensation Flow E2E
     * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
-    And header X-User-Id = ownerId
     And request
       """
       {
@@ -53,7 +52,6 @@ Feature: SAGA Compensation Flow E2E
     * url baseUrls.order
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request
       """
       {
@@ -92,7 +90,6 @@ Feature: SAGA Compensation Flow E2E
     * url baseUrls.order
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_FAILED' || response.status == 'ORDER_CONFIRMED'
     When method GET
     Then status 200
@@ -117,7 +114,6 @@ Feature: SAGA Compensation Flow E2E
     * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
-    And header X-User-Id = ownerId
     And request
       """
       {
@@ -142,7 +138,6 @@ Feature: SAGA Compensation Flow E2E
     * url baseUrls.order
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request
       """
       {
@@ -167,7 +162,6 @@ Feature: SAGA Compensation Flow E2E
     # ============================================
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200
@@ -181,7 +175,6 @@ Feature: SAGA Compensation Flow E2E
 
     Given path services.orders + '/' + orderId + '/cancel'
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request { "cancelReason": "E2E test - stock restoration check" }
     When method PATCH
     Then status 200
@@ -195,7 +188,6 @@ Feature: SAGA Compensation Flow E2E
 
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request
       """
       {
@@ -218,7 +210,6 @@ Feature: SAGA Compensation Flow E2E
     # This order should also be confirmed (stock was restored)
     Given path services.orders + '/' + newOrderId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200

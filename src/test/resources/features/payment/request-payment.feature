@@ -1,4 +1,4 @@
-@payment @saga
+@payment
 Feature: Payment Request
 
   Background:
@@ -6,7 +6,7 @@ Feature: Payment Request
     * def paymentPath = services.payments
     * def orderPath = services.orders
 
-  @happy-path @async
+  @happy-path @async @saga
   Scenario: [P1-PAY-01] Request payment for confirmed order
     # Setup: Create owner with store and product
     * def owner = call read('classpath:helpers/create-owner-and-login.feature')
@@ -26,7 +26,6 @@ Feature: Payment Request
     * url baseUrls.order
     Given path orderPath
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request
       """
       {
@@ -50,7 +49,6 @@ Feature: Payment Request
     # Wait for order confirmation
     Given path orderPath + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200
@@ -68,7 +66,6 @@ Feature: Payment Request
     Given path paymentPath
     And param userId = customerId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     # Retry until payments list is not empty (wait up to 20 seconds)
     And retry until response.payments.length > 0
     When method GET
@@ -83,7 +80,6 @@ Feature: Payment Request
     * print 'Payment request - paymentId:', paymentId, 'totalAmount:', totalAmountNum
     Given path paymentPath + '/request'
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     * def paymentRequest = { paymentId: '#(paymentId)', paymentMethod: 'CARD', totalAmount: '#(totalAmountNum)', paymentAmount: '#(totalAmountNum)', discountAmount: 0, deliveryFee: 0 }
     And request paymentRequest
     When method POST
@@ -106,5 +102,5 @@ Feature: Payment Request
       }
       """
     When method POST
-    # 인증 없이 요청 시 400/401/500 모두 허용 (서비스 내부 처리 방식에 따라 다름)
-    Then assert responseStatus == 400 || responseStatus == 401 || responseStatus == 500
+    # 인증 없이 요청 시 400/401/403/500 모두 허용 (서비스 또는 Gateway AuthorizationPolicy)
+    Then assert responseStatus == 400 || responseStatus == 401 || responseStatus == 403 || responseStatus == 500

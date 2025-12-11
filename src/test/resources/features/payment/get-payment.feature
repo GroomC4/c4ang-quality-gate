@@ -16,7 +16,6 @@ Feature: Payment Query
     Given path paymentPath
     And param userId = customerId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     When method GET
     Then status 200
     And match response.payments == '#array'
@@ -32,7 +31,6 @@ Feature: Payment Query
 
     Given path paymentPath + '/' + fakePaymentId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     When method GET
     Then status 400
     And match response.code == 'INVALID_REQUEST_PARAMETER'

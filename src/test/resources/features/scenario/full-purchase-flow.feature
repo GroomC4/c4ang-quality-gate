@@ -72,7 +72,6 @@ Feature: Full Purchase Flow E2E
     * url baseUrls.store
     Given path services.stores
     And header Authorization = 'Bearer ' + ownerToken
-    And header X-User-Id = ownerId
     And request
       """
       {
@@ -93,7 +92,6 @@ Feature: Full Purchase Flow E2E
     * url baseUrls.product
     Given path services.products
     And header Authorization = 'Bearer ' + ownerToken
-    And header X-User-Id = ownerId
     And request
       """
       {
@@ -151,7 +149,6 @@ Feature: Full Purchase Flow E2E
     * url baseUrls.order
     Given path services.orders
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And request
       """
       {
@@ -193,7 +190,6 @@ Feature: Full Purchase Flow E2E
     * url baseUrls.order
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And retry until response.status == 'ORDER_CONFIRMED' || response.status == 'ORDER_FAILED'
     When method GET
     Then status 200
@@ -212,7 +208,6 @@ Feature: Full Purchase Flow E2E
     Given path services.payments
     And param userId = customerId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And retry until response.payments.length > 0
     When method GET
     Then status 200
@@ -223,7 +218,6 @@ Feature: Full Purchase Flow E2E
     # Request payment
     Given path services.payments + '/request'
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     * def paymentRequest = { paymentId: '#(paymentId)', paymentMethod: 'CARD', totalAmount: '#(expectedTotal)', paymentAmount: '#(expectedTotal)', discountAmount: 0, deliveryFee: 0 }
     And request paymentRequest
     When method POST
@@ -257,7 +251,6 @@ Feature: Full Purchase Flow E2E
     * url baseUrls.order
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
-    And header X-User-Id = customerId
     And retry until response.status == 'PAYMENT_COMPLETED' || response.status == 'PAYMENT_PENDING' || response.status == 'PAYMENT_FAILED'
     When method GET
     Then status 200
