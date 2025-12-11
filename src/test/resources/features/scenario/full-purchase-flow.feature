@@ -173,20 +173,12 @@ Feature: Full Purchase Flow E2E
     * print 'Order created:', orderId, 'Total:', expectedTotal
 
     # ============================================
-    # Step 6: Wait for order confirmation via Saga Tracker
+    # Step 6: Wait for order confirmation via Order API
     # ============================================
-    * print '=== Step 6: Wait for order confirmation (Saga Tracker) ==='
+    * print '=== Step 6: Wait for order confirmation ==='
 
-    # Saga Tracker API를 통해 비동기 이벤트 처리 완료 확인
-    * def sagaWaitConfig = { orderId: '#(orderId)', expectedStatus: 'COMPLETED', token: '#(managerToken)', maxWait: 90000, interval: 3000 }
-    * def sagaResult = call read('classpath:helpers/wait-saga-status.feature') sagaWaitConfig
-    * print 'Saga Tracker result:', sagaResult.result
-
-    # Saga가 완료되었는지 확인 (실패 시에도 진행하고 Order API로 최종 상태 확인)
-    * def sagaSuccess = sagaResult.result.success
-    * print 'Saga completed successfully:', sagaSuccess
-
-    # Order API로 최종 상태 확인
+    # Order API로 ORDER_CONFIRMED 상태 확인
+    # Note: Saga COMPLETED는 Payment 완료 후에야 됨, 여기서는 Order 상태만 확인
     * url baseUrls.order
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
@@ -244,16 +236,34 @@ Feature: Full Purchase Flow E2E
     * print 'PG callback completed for paymentId:', paymentId
 
     # ============================================
-    # Step 8: Verify final order status
+    # Step 8: Verify final order status and Saga completion
     # ============================================
     * print '=== Step 8: Verify final order status ==='
 
+    # PaymentCompleted 이벤트 처리 후 Order 상태:
+    # ORDER_CONFIRMED -> PAYMENT_COMPLETED -> PREPARING (handlePaymentCompleted에서 두 단계 전이)
+    # 따라서 PREPARING 상태가 최종 성공 상태임
     * url baseUrls.order
     Given path services.orders + '/' + orderId
     And header Authorization = 'Bearer ' + customerToken
-    And retry until response.status == 'PAYMENT_COMPLETED' || response.status == 'PAYMENT_PENDING' || response.status == 'PAYMENT_FAILED'
+    And retry until response.status == 'PREPARING' || response.status == 'PAYMENT_COMPLETED' || response.status == 'ORDER_CANCELLED' || response.status == 'PAYMENT_FAILED'
     When method GET
     Then status 200
     * print 'Final order status:', response.status
+    # PREPARING이 성공 상태, 취소/실패 상태가 아닌지 확인
+    And match response.status != 'ORDER_CANCELLED'
+    And match response.status != 'PAYMENT_FAILED'
+
+    # ============================================
+    # Step 8.5: Verify Saga completion via Saga Tracker
+    # ============================================
+    * print '=== Step 8.5: Verify Saga completion (Saga Tracker) ==='
+
+    # Payment 완료 후 Saga가 COMPLETED 상태가 되었는지 확인
+    * def sagaWaitConfig = { orderId: '#(orderId)', expectedStatus: 'COMPLETED', token: '#(managerToken)', maxWait: 30000, interval: 2000 }
+    * def sagaResult = call read('classpath:helpers/wait-saga-status.feature') sagaWaitConfig
+    * print 'Saga Tracker result:', sagaResult.result
+    * def sagaSuccess = sagaResult.result.success
+    * print 'Saga completed successfully:', sagaSuccess
 
     * print '=== Full Purchase Flow Completed Successfully ==='
