@@ -20,16 +20,16 @@ Feature: Wait for Saga Status Helper
           karate.log('Saga Tracker polling attempt', i + 1, '/', maxRetries, 'for orderId:', orderId);
 
           // Saga Tracker API 호출 - orderId로 saga 조회
-          var headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+          var http = karate.http(baseUrl);
+          http.path('/api/v1/sagas');
+          http.param('orderId', orderId);
+          http.header('Content-Type', 'application/json');
+          http.header('Accept', 'application/json');
           if (token) {
-            headers['Authorization'] = 'Bearer ' + token;
+            http.header('Authorization', 'Bearer ' + token);
           }
 
-          var response = karate.http(baseUrl)
-            .path('/api/v1/sagas')
-            .param('orderId', orderId)
-            .headers(headers)
-            .get();
+          var response = http.get();
 
           karate.log('Saga Tracker response status:', response.status);
 

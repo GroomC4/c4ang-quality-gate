@@ -50,6 +50,9 @@ function fn() {
     ownerSignup: '/api/v1/auth/owners/signup',
     ownerLogin: '/api/v1/auth/owners/login',
     ownerLogout: '/api/v1/auth/owners/logout',
+    managerSignup: '/api/v1/auth/managers/signup',
+    managerLogin: '/api/v1/auth/managers/login',
+    managerLogout: '/api/v1/auth/managers/logout',
     tokenRefresh: '/api/v1/auth/refresh',
 
     // Store endpoints (store-api)
@@ -108,6 +111,11 @@ function fn() {
   config.generateOwnerEmail = function() {
     var id = java.util.UUID.randomUUID().toString().substring(0, 8);
     return 'owner-' + id + '@test.c4ang.com';
+  };
+
+  config.generateManagerEmail = function() {
+    var id = java.util.UUID.randomUUID().toString().substring(0, 8);
+    return 'manager-' + id + '@test.c4ang.com';
   };
 
   config.generateUsername = function() {

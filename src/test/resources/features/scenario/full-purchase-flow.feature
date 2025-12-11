@@ -37,6 +37,34 @@ Feature: Full Purchase Flow E2E
     * print 'Owner created and logged in:', ownerId
 
     # ============================================
+    # Step 1.5: Manager signup and login (for Saga Tracker API access)
+    # ============================================
+    * print '=== Step 1.5: Manager signup and login ==='
+    * def managerEmail = generateManagerEmail()
+    * def managerUsername = generateUsername()
+
+    Given path services.managerSignup
+    And request
+      """
+      {
+        "username": "#(managerUsername)",
+        "email": "#(managerEmail)",
+        "password": "#(testPassword)",
+        "phoneNumber": "010-9999-9999"
+      }
+      """
+    When method POST
+    Then status 201
+    * def managerId = response.userId
+
+    Given path services.managerLogin
+    And request { "email": "#(managerEmail)", "password": "#(testPassword)" }
+    When method POST
+    Then status 200
+    * def managerToken = response.accessToken
+    * print 'Manager created and logged in:', managerId
+
+    # ============================================
     # Step 2: Create store
     # ============================================
     * print '=== Step 2: Create store ==='
@@ -153,7 +181,7 @@ Feature: Full Purchase Flow E2E
     * print '=== Step 6: Wait for order confirmation (Saga Tracker) ==='
 
     # Saga Tracker API를 통해 비동기 이벤트 처리 완료 확인
-    * def sagaWaitConfig = { orderId: '#(orderId)', expectedStatus: 'COMPLETED', token: '#(customerToken)', maxWait: 90000, interval: 3000 }
+    * def sagaWaitConfig = { orderId: '#(orderId)', expectedStatus: 'COMPLETED', token: '#(managerToken)', maxWait: 90000, interval: 3000 }
     * def sagaResult = call read('classpath:helpers/wait-saga-status.feature') sagaWaitConfig
     * print 'Saga Tracker result:', sagaResult.result
 
